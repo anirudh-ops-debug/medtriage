@@ -14,12 +14,14 @@ import AccessibilityPage from "./pages/AccessibilityPage";
 import ArchitecturePage from "./pages/ArchitecturePage";
 import FutureScopePage from "./pages/FutureScopePage";
 import NotFound from "./pages/NotFound";
+import { RoleProvider } from "./contexts/RoleContext";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+      <RoleProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
@@ -34,9 +36,10 @@ const App = () => (
           <Route path="/accessibility" element={<AccessibilityPage />} />
           <Route path="/architecture" element={<ArchitecturePage />} />
           <Route path="/future" element={<FutureScopePage />} />
-          <Route path="*" element={<NotFound />} />
+        <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
+      </RoleProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Activity, Thermometer, Droplets, Heart, AlertTriangle, Wifi, WifiOff, Plus } from "lucide-react";
+import { Activity, Thermometer, Droplets, Heart, AlertTriangle, Wifi, WifiOff, Plus, Stethoscope, FileText, Brain } from "lucide-react";
+import { useRole } from "@/contexts/RoleContext";
 
 interface Patient {
   id: string;
@@ -19,17 +20,90 @@ interface Patient {
   complications: string[];
   oxygenDropRisk: number;
   cardiacRisk: number;
+  diagnosis: string;
 }
 
 const generateVital = (base: number, range: number) => Math.round(base + (Math.random() - 0.5) * range);
 
 const initialPatients: Patient[] = [
-  { id: "PT-001", name: "Rajesh Kumar", age: 62, gender: "M", connected: true, vitals: { hr: 112, bpSys: 155, bpDia: 98, spo2: 91, temp: 38.8 }, riskLevel: "Critical", complications: ["Cardiac Arrest Risk", "Hypoxemia"], oxygenDropRisk: 78, cardiacRisk: 65 },
-  { id: "PT-002", name: "Priya Sharma", age: 45, gender: "F", connected: true, vitals: { hr: 88, bpSys: 130, bpDia: 85, spo2: 95, temp: 37.6 }, riskLevel: "Moderate", complications: ["Mild Hypertension"], oxygenDropRisk: 22, cardiacRisk: 15 },
-  { id: "PT-003", name: "Amit Patel", age: 71, gender: "M", connected: true, vitals: { hr: 125, bpSys: 170, bpDia: 105, spo2: 88, temp: 39.2 }, riskLevel: "Critical", complications: ["Sepsis Suspected", "Respiratory Failure"], oxygenDropRisk: 89, cardiacRisk: 72 },
-  { id: "PT-004", name: "Sunita Devi", age: 34, gender: "F", connected: true, vitals: { hr: 76, bpSys: 118, bpDia: 76, spo2: 98, temp: 36.9 }, riskLevel: "Stable", complications: [], oxygenDropRisk: 5, cardiacRisk: 3 },
-  { id: "PT-005", name: "Mohammed Iqbal", age: 58, gender: "M", connected: false, vitals: { hr: 98, bpSys: 142, bpDia: 92, spo2: 93, temp: 38.1 }, riskLevel: "High", complications: ["Diabetic Emergency"], oxygenDropRisk: 45, cardiacRisk: 38 },
+  { id: "PT-001", name: "Rajesh Kumar", age: 62, gender: "M", connected: true, vitals: { hr: 112, bpSys: 155, bpDia: 98, spo2: 91, temp: 38.8 }, riskLevel: "Critical", complications: ["Cardiac Arrest Risk", "Hypoxemia"], oxygenDropRisk: 78, cardiacRisk: 65, diagnosis: "" },
+  { id: "PT-002", name: "Priya Sharma", age: 45, gender: "F", connected: true, vitals: { hr: 88, bpSys: 130, bpDia: 85, spo2: 95, temp: 37.6 }, riskLevel: "Moderate", complications: ["Mild Hypertension"], oxygenDropRisk: 22, cardiacRisk: 15, diagnosis: "" },
+  { id: "PT-003", name: "Amit Patel", age: 71, gender: "M", connected: true, vitals: { hr: 125, bpSys: 170, bpDia: 105, spo2: 88, temp: 39.2 }, riskLevel: "Critical", complications: ["Sepsis Suspected", "Respiratory Failure"], oxygenDropRisk: 89, cardiacRisk: 72, diagnosis: "" },
+  { id: "PT-004", name: "Sunita Devi", age: 34, gender: "F", connected: true, vitals: { hr: 76, bpSys: 118, bpDia: 76, spo2: 98, temp: 36.9 }, riskLevel: "Stable", complications: [], oxygenDropRisk: 5, cardiacRisk: 3, diagnosis: "" },
+  { id: "PT-005", name: "Mohammed Iqbal", age: 58, gender: "M", connected: false, vitals: { hr: 98, bpSys: 142, bpDia: 92, spo2: 93, temp: 38.1 }, riskLevel: "High", complications: ["Diabetic Emergency"], oxygenDropRisk: 45, cardiacRisk: 38, diagnosis: "" },
 ];
+
+// AI recommendation engine based on diagnosis keywords
+const getAIRecommendations = (diagnosis: string, vitals: Patient["vitals"], riskLevel: string) => {
+  const diag = diagnosis.toLowerCase();
+  const recommendations: { step: string; priority: "critical" | "high" | "routine" }[] = [];
+
+  if (diag.includes("mi") || diag.includes("myocardial") || diag.includes("heart attack") || diag.includes("cardiac")) {
+    recommendations.push(
+      { step: "Administer Aspirin 300mg + Clopidogrel 600mg stat", priority: "critical" },
+      { step: "12-lead ECG immediately – assess ST-segment changes", priority: "critical" },
+      { step: "Serial Troponin I at 0, 3, 6 hours", priority: "high" },
+      { step: "Prepare for PCI – alert Cath Lab team", priority: "critical" },
+      { step: "IV Heparin drip per protocol", priority: "high" },
+      { step: "Continuous cardiac monitoring – transfer to CCU", priority: "high" },
+    );
+  } else if (diag.includes("pneumonia") || diag.includes("respiratory") || diag.includes("lung")) {
+    recommendations.push(
+      { step: "Chest X-ray PA view – assess infiltrates", priority: "critical" },
+      { step: "Start empirical antibiotics – Ceftriaxone + Azithromycin", priority: "critical" },
+      { step: "ABG analysis for respiratory status", priority: "high" },
+      { step: "Sputum culture & sensitivity", priority: "routine" },
+      { step: vitals.spo2 < 92 ? "High-flow O₂ via non-rebreather mask" : "Supplemental O₂ via nasal cannula", priority: vitals.spo2 < 92 ? "critical" : "routine" },
+      { step: "Monitor SpO₂ q15min – escalate to BiPAP if declining", priority: "high" },
+    );
+  } else if (diag.includes("sepsis") || diag.includes("septic")) {
+    recommendations.push(
+      { step: "STAT blood cultures x2 from different sites", priority: "critical" },
+      { step: "IV fluid bolus – 30ml/kg crystalloid within 1 hour", priority: "critical" },
+      { step: "Broad-spectrum antibiotics within 1 hour of recognition", priority: "critical" },
+      { step: "Serum Lactate level – repeat in 2 hours", priority: "high" },
+      { step: "Vasopressors if MAP <65 after fluid resuscitation", priority: "high" },
+      { step: "Hourly urine output monitoring via Foley catheter", priority: "routine" },
+    );
+  } else if (diag.includes("stroke") || diag.includes("cva") || diag.includes("cerebro")) {
+    recommendations.push(
+      { step: "STAT CT Head without contrast – rule out hemorrhage", priority: "critical" },
+      { step: "Assess for tPA eligibility (within 4.5hr window)", priority: "critical" },
+      { step: "NIH Stroke Scale assessment", priority: "high" },
+      { step: "Blood glucose, INR, CBC, BMP stat", priority: "high" },
+      { step: "Neurology consult – ASAP", priority: "critical" },
+      { step: "NPO status until swallow assessment", priority: "routine" },
+    );
+  } else if (diag.includes("diabetes") || diag.includes("dka") || diag.includes("hypoglycemia") || diag.includes("diabetic")) {
+    recommendations.push(
+      { step: "STAT blood glucose + HbA1c + BMP", priority: "critical" },
+      { step: "Insulin drip protocol if BG > 250 mg/dL", priority: "critical" },
+      { step: "IV NS bolus 1L – correct dehydration", priority: "high" },
+      { step: "Monitor potassium q2h – replace as needed", priority: "high" },
+      { step: "ABG if DKA suspected", priority: "high" },
+      { step: "Endocrinology consult for insulin adjustment", priority: "routine" },
+    );
+  } else if (diag.includes("fracture") || diag.includes("trauma") || diag.includes("injury")) {
+    recommendations.push(
+      { step: "X-ray of affected region – AP and lateral views", priority: "critical" },
+      { step: "Pain management – IV Morphine/Ketorolac per protocol", priority: "high" },
+      { step: "Immobilize with splint/sling", priority: "high" },
+      { step: "Orthopedic consult for surgical evaluation", priority: "high" },
+      { step: "Tetanus prophylaxis if open wound", priority: "routine" },
+      { step: "CBC, Type & Cross if surgical candidate", priority: "routine" },
+    );
+  } else if (diag.trim().length > 0) {
+    recommendations.push(
+      { step: "Comprehensive metabolic panel + CBC with differential", priority: "high" },
+      { step: "Targeted imaging based on clinical presentation", priority: "high" },
+      { step: "Specialist consultation as indicated", priority: "routine" },
+      { step: "Serial vital sign monitoring q15min", priority: riskLevel === "Critical" ? "critical" : "routine" },
+      { step: "Reassess and update treatment plan in 2 hours", priority: "routine" },
+    );
+  }
+
+  return recommendations;
+};
 
 const WaveformSVG = ({ hr }: { hr: number }) => {
   const isCritical = hr > 110 || hr < 50;
@@ -62,11 +136,26 @@ const RiskBadge = ({ level }: { level: string }) => {
 };
 
 const TriagePage = () => {
+  const { role } = useRole();
   const [patients, setPatients] = useState<Patient[]>(initialPatients);
   const [selectedId, setSelectedId] = useState<string>("PT-001");
   const [alert, setAlert] = useState<string | null>(null);
+  const [diagnosisInput, setDiagnosisInput] = useState("");
 
   const selected = patients.find((p) => p.id === selectedId)!;
+  const canDiagnose = role === "doctor" || role === "admin";
+  const aiRecommendations = getAIRecommendations(selected.diagnosis, selected.vitals, selected.riskLevel);
+
+  // Sync diagnosis input when patient changes
+  useEffect(() => {
+    setDiagnosisInput(selected.diagnosis);
+  }, [selectedId]);
+
+  const handleSaveDiagnosis = () => {
+    setPatients((prev) =>
+      prev.map((p) => (p.id === selectedId ? { ...p, diagnosis: diagnosisInput } : p))
+    );
+  };
 
   // Simulate live vitals
   useEffect(() => {
@@ -112,7 +201,7 @@ const TriagePage = () => {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-lg font-bold text-foreground">AI Triage Module</h1>
-            <p className="text-xs text-muted-foreground">Live vital monitoring & AI classification</p>
+            <p className="text-xs text-muted-foreground">Live vital monitoring & AI classification · <span className="text-primary font-semibold capitalize">{role}</span></p>
           </div>
           <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold glow-red hover:bg-primary/90 transition-all">
             <Plus size={14} /> New Patient
@@ -138,6 +227,12 @@ const TriagePage = () => {
                   <span className="text-[10px] text-muted-foreground">{p.id} · {p.age}{p.gender}</span>
                   <RiskBadge level={p.riskLevel} />
                 </div>
+                {p.diagnosis && (
+                  <div className="mt-1.5 flex items-center gap-1">
+                    <FileText size={9} className="text-medical-blue" />
+                    <span className="text-[9px] text-medical-blue truncate">{p.diagnosis}</span>
+                  </div>
+                )}
               </button>
             ))}
           </div>
@@ -177,6 +272,43 @@ const TriagePage = () => {
               </div>
 
               <p className="text-[9px] text-muted-foreground text-right mt-2">Last updated: {new Date().toLocaleTimeString()}</p>
+            </div>
+
+            {/* Doctor Diagnosis Panel */}
+            <div className="stat-card">
+              <div className="flex items-center gap-2 mb-3">
+                <Stethoscope size={14} className="text-primary" />
+                <h2 className="text-xs font-semibold text-foreground">Doctor's Diagnosis</h2>
+                {!canDiagnose && <span className="text-[9px] text-muted-foreground ml-auto">(Doctor access only)</span>}
+              </div>
+
+              {selected.diagnosis && (
+                <div className="mb-3 p-2 rounded-lg bg-primary/5 border border-primary/20">
+                  <p className="text-[10px] text-muted-foreground mb-0.5">Current Diagnosis</p>
+                  <p className="text-xs text-foreground font-semibold">{selected.diagnosis}</p>
+                </div>
+              )}
+
+              {canDiagnose ? (
+                <div className="space-y-2">
+                  <textarea
+                    value={diagnosisInput}
+                    onChange={(e) => setDiagnosisInput(e.target.value)}
+                    placeholder="Enter diagnosis (e.g., Acute MI, Pneumonia, Sepsis, Stroke, DKA, Fracture...)"
+                    className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all resize-none h-20"
+                  />
+                  <button
+                    onClick={handleSaveDiagnosis}
+                    className="w-full py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <Brain size={12} /> Save & Generate AI Recommendations
+                  </button>
+                </div>
+              ) : (
+                <p className="text-[10px] text-muted-foreground italic">
+                  {selected.diagnosis ? "Diagnosis recorded by attending physician." : "No diagnosis entered yet. Only doctors can add a diagnosis."}
+                </p>
+              )}
             </div>
           </div>
 
@@ -233,6 +365,44 @@ const TriagePage = () => {
                 </div>
               )}
             </div>
+
+            {/* AI Recommendations based on Diagnosis */}
+            {selected.diagnosis && aiRecommendations.length > 0 && (
+              <div className="stat-card">
+                <div className="flex items-center gap-2 mb-3">
+                  <Brain size={14} className="text-primary" />
+                  <h2 className="text-xs font-semibold text-foreground">AI Recommended Steps</h2>
+                </div>
+                <p className="text-[9px] text-muted-foreground mb-3">Based on diagnosis: <span className="text-primary font-semibold">{selected.diagnosis}</span></p>
+                <div className="space-y-1.5">
+                  {aiRecommendations.map((rec, i) => {
+                    const priorityStyles = {
+                      critical: "border-primary/30 bg-primary/5 text-primary",
+                      high: "border-medical-yellow/30 bg-medical-yellow/5 text-medical-yellow",
+                      routine: "border-border bg-secondary text-muted-foreground",
+                    };
+                    const priorityLabels = { critical: "CRITICAL", high: "HIGH", routine: "ROUTINE" };
+                    return (
+                      <div key={i} className={`p-2 rounded-lg border ${priorityStyles[rec.priority]}`}>
+                        <div className="flex items-start gap-2">
+                          <span className={`text-[8px] font-bold px-1 py-0.5 rounded shrink-0 mt-0.5 ${
+                            rec.priority === "critical" ? "bg-primary/20 text-primary" :
+                            rec.priority === "high" ? "bg-medical-yellow/20 text-medical-yellow" :
+                            "bg-muted text-muted-foreground"
+                          }`}>
+                            {priorityLabels[rec.priority]}
+                          </span>
+                          <span className="text-[11px] text-foreground">{rec.step}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-[8px] text-muted-foreground mt-3 italic">
+                  ⚕️ AI-generated recommendations – clinical judgment supersedes all suggestions
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>

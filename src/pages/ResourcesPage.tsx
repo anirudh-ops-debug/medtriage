@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Bed, Users, Stethoscope, Syringe, AlertTriangle, Lightbulb } from "lucide-react";
+import { Bed, Users, Stethoscope, Syringe, AlertTriangle, Lightbulb, Pencil, Check } from "lucide-react";
+import { useRole } from "@/contexts/RoleContext";
 
 const suggestions = [
   { text: "Reallocate Cardiologist to ER – cardiac cases rising", urgent: true },
@@ -11,7 +12,15 @@ const suggestions = [
 ];
 
 const ResourcesPage = () => {
+  const { role } = useRole();
   const [erOverload, setErOverload] = useState(76);
+  const [resources, setResources] = useState({
+    icuUsed: 6, icuTotal: 8,
+    generalUsed: 38, generalTotal: 50,
+    doctorsActive: 14, doctorsTotal: 20,
+    nursesOnDuty: 24, nursesTotal: 32,
+    otActive: 3, otTotal: 5,
+  });
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -20,18 +29,30 @@ const ResourcesPage = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const canEditOT = role === "doctor" || role === "admin";
+  const canEditICU = role === "nurse" || role === "admin";
+
   return (
     <DashboardLayout>
       <div className="animate-fade-up">
         <h1 className="text-lg font-bold text-foreground mb-1">Hospital Resource Optimization</h1>
-        <p className="text-xs text-muted-foreground mb-6">AI-driven resource allocation & overload prediction</p>
+        <p className="text-xs text-muted-foreground mb-4">AI-driven resource allocation · Logged in as <span className="text-primary font-semibold capitalize">{role}</span></p>
+
+        {(role === "doctor" || role === "nurse") && (
+          <div className="mb-4 p-3 rounded-lg bg-primary/5 border border-primary/20 flex items-center gap-2">
+            <Pencil size={14} className="text-primary" />
+            <span className="text-[11px] text-muted-foreground">
+              {role === "doctor" ? "Click the edit icon on OT cards to update details." : "Click the edit icon on ICU/Nurse cards to update."}
+            </span>
+          </div>
+        )}
 
         <div className="grid grid-cols-5 gap-3 mb-6">
-          <ResourceCard icon={Bed} label="ICU Beds" used={6} total={8} />
-          <ResourceCard icon={Bed} label="General Beds" used={38} total={50} />
-          <ResourceCard icon={Stethoscope} label="Doctors Active" used={14} total={20} />
-          <ResourceCard icon={Users} label="Nurses On Duty" used={24} total={32} />
-          <ResourceCard icon={Syringe} label="OT Active" used={3} total={5} />
+          <EditableResourceCard icon={Bed} label="ICU Beds" used={resources.icuUsed} total={resources.icuTotal} editable={canEditICU} onSave={(v) => setResources(p => ({...p, icuUsed: v}))} />
+          <EditableResourceCard icon={Bed} label="General Beds" used={resources.generalUsed} total={resources.generalTotal} />
+          <EditableResourceCard icon={Stethoscope} label="Doctors Active" used={resources.doctorsActive} total={resources.doctorsTotal} />
+          <EditableResourceCard icon={Users} label="Nurses On Duty" used={resources.nursesOnDuty} total={resources.nursesTotal} editable={canEditICU} onSave={(v) => setResources(p => ({...p, nursesOnDuty: v}))} />
+          <EditableResourceCard icon={Syringe} label="OT Active" used={resources.otActive} total={resources.otTotal} editable={canEditOT} onSave={(v) => setResources(p => ({...p, otActive: v}))} />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -72,14 +93,42 @@ const ResourcesPage = () => {
   );
 };
 
-const ResourceCard = ({ icon: Icon, label, used, total }: { icon: any; label: string; used: number; total: number }) => {
+const EditableResourceCard = ({ icon: Icon, label, used, total, editable, onSave }: { icon: any; label: string; used: number; total: number; editable?: boolean; onSave?: (val: number) => void }) => {
   const pct = (used / total) * 100;
   const isHigh = pct > 80;
+  const [editing, setEditing] = useState(false);
+  const [editVal, setEditVal] = useState(String(used));
+
+  useEffect(() => { setEditVal(String(used)); }, [used]);
+
   return (
     <div className={`stat-card ${isHigh ? "glow-red-border border-primary/40" : ""}`}>
-      <Icon size={16} className={isHigh ? "text-primary" : "text-muted-foreground"} />
+      <div className="flex items-center justify-between">
+        <Icon size={16} className={isHigh ? "text-primary" : "text-muted-foreground"} />
+        {editable && !editing && (
+          <button onClick={() => setEditing(true)} className="p-0.5 rounded hover:bg-primary/10 transition-colors">
+            <Pencil size={11} className="text-primary" />
+          </button>
+        )}
+      </div>
       <p className="text-[10px] text-muted-foreground mt-2">{label}</p>
-      <p className={`text-lg font-bold ${isHigh ? "text-primary" : "text-foreground"}`}>{used}<span className="text-xs text-muted-foreground font-normal">/{total}</span></p>
+      {editing ? (
+        <div className="flex items-center gap-1 mt-1">
+          <input
+            type="number"
+            value={editVal}
+            onChange={(e) => setEditVal(e.target.value)}
+            className="w-12 bg-secondary border border-primary/30 rounded px-1 py-0.5 text-sm font-bold text-foreground focus:outline-none"
+            autoFocus
+          />
+          <span className="text-xs text-muted-foreground">/{total}</span>
+          <button onClick={() => { onSave?.(Math.max(0, Math.min(total, Number(editVal)))); setEditing(false); }} className="p-0.5 rounded bg-primary/20 hover:bg-primary/30">
+            <Check size={12} className="text-primary" />
+          </button>
+        </div>
+      ) : (
+        <p className={`text-lg font-bold ${isHigh ? "text-primary" : "text-foreground"}`}>{used}<span className="text-xs text-muted-foreground font-normal">/{total}</span></p>
+      )}
       <div className="h-1 rounded-full bg-secondary mt-2">
         <div className={`h-full rounded-full ${isHigh ? "bg-primary" : "bg-medical-green"}`} style={{ width: `${pct}%` }} />
       </div>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Shield, Cross, Eye, EyeOff, Zap } from "lucide-react";
+import { useRole, UserRole } from "@/contexts/RoleContext";
 
 const roles = [
   { id: "admin", label: "Admin", description: "Full system access" },
@@ -11,15 +12,18 @@ const roles = [
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const [selectedRole, setSelectedRole] = useState("admin");
+  const { setRole } = useRole();
+  const [selectedRole, setSelectedRole] = useState<UserRole>("admin");
   const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    setRole(selectedRole);
     navigate("/dashboard");
   };
 
   const handleEmergencyAccess = () => {
+    setRole("admin");
     navigate("/dashboard");
   };
 
@@ -53,7 +57,7 @@ const LoginPage = () => {
               <button
                 key={role.id}
                 type="button"
-                onClick={() => setSelectedRole(role.id)}
+                onClick={() => setSelectedRole(role.id as UserRole)}
                 className={`p-3 rounded-lg border text-left transition-all duration-200 ${
                   selectedRole === role.id
                     ? "border-primary/50 bg-primary/10 glow-red-border"
