@@ -1,11 +1,14 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Activity, Users, Building2, Heart, Cpu,
-  Rocket, Settings, LogOut, Cross, Accessibility
+  Rocket, Settings, LogOut, Cross, Accessibility, UserPlus, List
 } from "lucide-react";
+import { useRole } from "@/contexts/RoleContext";
 
 const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { path: "/register", label: "Register Patient", icon: UserPlus },
+  { path: "/patients", label: "Patient List", icon: List },
   { path: "/triage", label: "AI Triage", icon: Activity },
   { path: "/queue", label: "Priority Queue", icon: Users },
   { path: "/deterioration", label: "Deterioration", icon: Cpu },
@@ -18,6 +21,7 @@ const navItems = [
 
 const AppSidebar = () => {
   const location = useLocation();
+  const { role } = useRole();
 
   return (
     <aside className="w-60 h-screen bg-sidebar border-r border-sidebar-border flex flex-col fixed left-0 top-0 z-40">
@@ -28,7 +32,7 @@ const AppSidebar = () => {
         </div>
         <div>
           <p className="text-xs font-bold text-foreground leading-tight">MedTriage AI</p>
-          <p className="text-[10px] text-muted-foreground">v2.1 · Admin</p>
+          <p className="text-[10px] text-muted-foreground">v2.1 · <span className="capitalize">{role}</span></p>
         </div>
       </div>
 
