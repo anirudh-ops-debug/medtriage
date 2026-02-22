@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Activity, Thermometer, Droplets, Heart, AlertTriangle, Wifi, WifiOff, Plus, Stethoscope, Brain } from "lucide-react";
+import { Activity, Thermometer, Droplets, Heart, AlertTriangle, Wifi, WifiOff, Plus, Stethoscope, Brain, MonitorSmartphone } from "lucide-react";
 import { useRole } from "@/contexts/RoleContext";
-import { usePatients, shouldShowLiveVitals, PatientVitals } from "@/contexts/PatientContext";
+import { usePatients, shouldShowLiveVitals, PatientVitals, playPatientClickSound } from "@/contexts/PatientContext";
 import { useNavigate } from "react-router-dom";
 
 // AI recommendation engine
@@ -46,11 +46,7 @@ const RiskBadge = ({ level }: { level: string }) => {
     Moderate: "bg-medical-blue/20 text-medical-blue border-medical-blue/40",
     Stable: "bg-medical-green/20 text-medical-green border-medical-green/40",
   };
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border ${styles[level] || ""}`}>
-      {level}
-    </span>
-  );
+  return <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border ${styles[level] || ""}`}>{level}</span>;
 };
 
 const VitalBox = ({ icon: Icon, label, value, unit, danger }: { icon: any; label: string; value: string; unit: string; danger: boolean }) => (
@@ -79,14 +75,11 @@ const RiskBar = ({ label, value }: { label: string; value: number }) => (
 
 const TriagePage = () => {
   const { role } = useRole();
-  const { patients, updateDiagnosis, addManualVitals } = usePatients();
+  const { patients, updateDiagnosis, addManualVitals, statusChangeMessages } = usePatients();
   const navigate = useNavigate();
   const [selectedId, setSelectedId] = useState<string>(patients[0]?.id || "");
-  const [alert, setAlert] = useState<string | null>(null);
   const [diagnosisInput, setDiagnosisInput] = useState("");
-  const [prevRiskLevels, setPrevRiskLevels] = useState<Record<string, string>>({});
 
-  // Manual vitals for non-live patients
   const [showManualForm, setShowManualForm] = useState(false);
   const [manualHr, setManualHr] = useState("");
   const [manualBpSys, setManualBpSys] = useState("");
@@ -104,18 +97,11 @@ const TriagePage = () => {
     if (selected) setDiagnosisInput(selected.diagnosis);
   }, [selectedId]);
 
-  // Detect risk level changes for alert
-  useEffect(() => {
-    patients.forEach(p => {
-      if (prevRiskLevels[p.id] && prevRiskLevels[p.id] !== "Critical" && p.riskLevel === "Critical") {
-        setAlert(`${p.name}: Severity Level Updated Due to Vital Instability`);
-        setTimeout(() => setAlert(null), 4000);
-      }
-    });
-    const levels: Record<string, string> = {};
-    patients.forEach(p => { levels[p.id] = p.riskLevel; });
-    setPrevRiskLevels(levels);
-  }, [patients]);
+  const handleSelectPatient = (id: string) => {
+    const p = patients.find(pt => pt.id === id);
+    if (p) playPatientClickSound(p.riskLevel);
+    setSelectedId(id);
+  };
 
   const handleSaveDiagnosis = () => {
     if (selected) updateDiagnosis(selected.id, diagnosisInput);
@@ -136,12 +122,13 @@ const TriagePage = () => {
   return (
     <DashboardLayout>
       <div className="animate-fade-up">
-        {alert && (
-          <div className="mb-4 p-3 rounded-lg bg-primary/15 border border-primary/40 glow-red-border flex items-center gap-2 animate-fade-up">
-            <AlertTriangle size={16} className="text-primary" />
-            <span className="text-xs text-primary font-semibold">{alert}</span>
+        {/* Status change messages */}
+        {Object.entries(statusChangeMessages).map(([pid, msg]) => (
+          <div key={pid} className="mb-3 p-3 rounded-lg bg-primary/15 border border-primary/40 glow-red-border flex items-center gap-2 animate-fade-up">
+            <MonitorSmartphone size={16} className="text-primary" />
+            <span className="text-xs text-primary font-semibold">{msg}</span>
           </div>
-        )}
+        ))}
 
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -157,13 +144,10 @@ const TriagePage = () => {
           {/* Patient List */}
           <div className="col-span-3 space-y-2 max-h-[calc(100vh-140px)] overflow-y-auto">
             {patients.map(p => (
-              <button
-                key={p.id}
-                onClick={() => setSelectedId(p.id)}
+              <button key={p.id} onClick={() => handleSelectPatient(p.id)}
                 className={`w-full text-left p-3 rounded-lg border transition-all duration-200 ${
                   selectedId === p.id ? "border-primary/40 bg-primary/5 glow-red-border" : "border-border bg-card hover:border-muted-foreground/20"
-                } ${p.riskLevel === "Critical" ? "critical-flash" : ""}`}
-              >
+                } ${p.riskLevel === "Critical" ? "critical-flash" : ""}`}>
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs font-semibold text-foreground">{p.name}</span>
                   {shouldShowLiveVitals(p.riskLevel) && p.connected ? <div className="status-dot status-dot-connected" /> : !shouldShowLiveVitals(p.riskLevel) ? null : <div className="status-dot status-dot-disconnected" />}
@@ -172,9 +156,7 @@ const TriagePage = () => {
                   <span className="text-[10px] text-muted-foreground">{p.id} · {p.age}{p.gender}</span>
                   <RiskBadge level={p.riskLevel} />
                 </div>
-                {!shouldShowLiveVitals(p.riskLevel) && (
-                  <span className="text-[9px] text-muted-foreground mt-1 block">Manual vitals only</span>
-                )}
+                {!shouldShowLiveVitals(p.riskLevel) && <span className="text-[9px] text-muted-foreground mt-1 block">Manual vitals only</span>}
               </button>
             ))}
           </div>
@@ -199,7 +181,6 @@ const TriagePage = () => {
                 </div>
               </div>
 
-              {/* ECG only for live */}
               {isLive && (
                 <div className="mb-3 p-2 rounded bg-secondary border border-border">
                   <p className="text-[9px] text-muted-foreground mb-1">ECG Waveform</p>
@@ -216,7 +197,6 @@ const TriagePage = () => {
 
               {isLive && <p className="text-[9px] text-muted-foreground text-right mt-2">Last updated: {new Date().toLocaleTimeString()}</p>}
 
-              {/* Manual vitals entry */}
               {!isLive && canEnterVitals && (
                 <div className="mt-3 pt-3 border-t border-border">
                   {!showManualForm ? (
@@ -250,7 +230,6 @@ const TriagePage = () => {
                 </div>
               )}
 
-              {/* Manual vitals history */}
               {!isLive && selected.manualVitals.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-border">
                   <p className="text-[10px] text-muted-foreground mb-2">Vitals History</p>

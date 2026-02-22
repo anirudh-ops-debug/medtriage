@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
-import { usePatients, shouldShowLiveVitals, PatientVitals } from "@/contexts/PatientContext";
+import { usePatients, shouldShowLiveVitals, PatientVitals, playPatientClickSound } from "@/contexts/PatientContext";
 import { useRole } from "@/contexts/RoleContext";
-import { Heart, Activity, Droplets, Thermometer, Wifi, WifiOff, ArrowLeft, Barcode, Printer, Stethoscope, Brain, AlertTriangle, FileText, ClipboardList, Plus } from "lucide-react";
+import { Heart, Activity, Droplets, Thermometer, Wifi, WifiOff, ArrowLeft, Barcode, Printer, Stethoscope, Brain, AlertTriangle, FileText, Plus, Upload, Download, MonitorSmartphone } from "lucide-react";
 
 // AI recommendation engine
 const getAIRecommendations = (diagnosis: string, vitals: PatientVitals, riskLevel: string) => {
@@ -51,15 +51,27 @@ const VitalBox = ({ icon: Icon, label, value, unit, danger }: { icon: any; label
   </div>
 );
 
+const RiskBar = ({ label, value }: { label: string; value: number }) => (
+  <div>
+    <div className="flex items-center justify-between mb-1">
+      <span className="text-[10px] text-muted-foreground">{label}</span>
+      <span className={`text-[10px] font-bold ${value > 60 ? "text-primary" : value > 30 ? "text-medical-yellow" : "text-medical-green"}`}>{value}%</span>
+    </div>
+    <div className="h-1.5 rounded-full bg-secondary">
+      <div className={`h-full rounded-full transition-all duration-1000 ${value > 60 ? "bg-primary" : value > 30 ? "bg-medical-yellow" : "bg-medical-green"}`} style={{ width: `${value}%` }} />
+    </div>
+  </div>
+);
+
 const PatientDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getPatient, updateDiagnosis, updateSuggestions, addManualVitals, patients } = usePatients();
+  const { getPatient, updateDiagnosis, addManualVitals, addUploadedFile, patients, statusChangeMessages } = usePatients();
   const { role } = useRole();
   const patient = getPatient(id || "");
+  const soundPlayedRef = useRef(false);
 
   const [diagnosisInput, setDiagnosisInput] = useState("");
-  const [suggestionsInput, setSuggestionsInput] = useState("");
   const [showManualForm, setShowManualForm] = useState(false);
   const [manualHr, setManualHr] = useState("");
   const [manualBpSys, setManualBpSys] = useState("");
@@ -70,7 +82,11 @@ const PatientDetailPage = () => {
   useEffect(() => {
     if (patient) {
       setDiagnosisInput(patient.diagnosis);
-      setSuggestionsInput(patient.doctorSuggestions);
+      // Play sound once when opening a Critical/High patient
+      if (!soundPlayedRef.current) {
+        playPatientClickSound(patient.riskLevel);
+        soundPlayedRef.current = true;
+      }
     }
   }, [id]);
 
@@ -85,12 +101,12 @@ const PatientDetailPage = () => {
     );
   }
 
-  // Re-read patient from context for live updates
   const livePatient = patients.find(p => p.id === patient.id) || patient;
   const isLive = shouldShowLiveVitals(livePatient.riskLevel);
   const canDiagnose = role === "doctor" || role === "admin";
   const canEnterVitals = role === "nurse" || role === "admin";
   const aiRecs = getAIRecommendations(livePatient.diagnosis, livePatient.vitals, livePatient.riskLevel);
+  const statusMsg = statusChangeMessages[livePatient.id];
 
   const riskBadgeStyles: Record<string, string> = {
     Critical: "bg-primary/20 text-primary border-primary/40 critical-flash",
@@ -103,10 +119,6 @@ const PatientDetailPage = () => {
     updateDiagnosis(livePatient.id, diagnosisInput);
   };
 
-  const handleSaveSuggestions = () => {
-    updateSuggestions(livePatient.id, suggestionsInput);
-  };
-
   const handleManualVitals = () => {
     if (!manualHr || !manualBpSys || !manualBpDia || !manualSpo2 || !manualTemp) return;
     addManualVitals(livePatient.id, {
@@ -117,9 +129,48 @@ const PatientDetailPage = () => {
     setManualHr(""); setManualBpSys(""); setManualBpDia(""); setManualSpo2(""); setManualTemp("");
   };
 
+  const handleFileUpload = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".pdf,.jpg,.png,.doc,.docx";
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) addUploadedFile(livePatient.id, file.name);
+    };
+    input.click();
+  };
+
+  const handleGeneratePDF = () => {
+    const w = window.open("", "_blank", "width=800,height=600");
+    if (!w) return;
+    const reportsHtml = livePatient.reports.map(r => `<tr><td>${r.name}</td><td>${r.date}</td><td>${r.type}</td></tr>`).join("");
+    const uploadedHtml = livePatient.uploadedFiles.map(f => `<li>${f}</li>`).join("");
+    w.document.write(`<html><head><title>Patient Report – ${livePatient.name}</title>
+      <style>body{font-family:Arial,sans-serif;padding:30px;color:#222}h1{color:#B11226}table{width:100%;border-collapse:collapse;margin:15px 0}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f5f5f5}.section{margin:20px 0}</style></head><body>
+      <h1>Patient Report – ${livePatient.name}</h1>
+      <p><strong>ID:</strong> ${livePatient.id} | <strong>Age:</strong> ${livePatient.age}${livePatient.gender} | <strong>Admitted:</strong> ${livePatient.admissionDate} | <strong>Status:</strong> ${livePatient.riskLevel}</p>
+      <p><strong>Barcode:</strong> ${livePatient.barcode}</p>
+      <div class="section"><h2>Symptoms</h2><p>${livePatient.symptoms.join(", ") || "None"}</p></div>
+      <div class="section"><h2>Diagnosis</h2><p>${livePatient.diagnosis || "Pending"}</p></div>
+      <div class="section"><h2>Vitals</h2><p>HR: ${livePatient.vitals.hr} BPM | BP: ${livePatient.vitals.bpSys}/${livePatient.vitals.bpDia} mmHg | SpO₂: ${livePatient.vitals.spo2}% | Temp: ${livePatient.vitals.temp.toFixed(1)}°C</p></div>
+      <div class="section"><h2>Test Reports</h2><table><tr><th>Test</th><th>Date</th><th>Type</th></tr>${reportsHtml || "<tr><td colspan=3>No reports</td></tr>"}</table></div>
+      ${uploadedHtml ? `<div class="section"><h2>Uploaded Files</h2><ul>${uploadedHtml}</ul></div>` : ""}
+      <div class="section"><h2>Medical History</h2><p>${livePatient.medicalHistory.join(", ") || "None"}</p></div>
+      <p style="margin-top:30px;font-size:12px;color:#666">Generated by MedTriage AI · ${new Date().toLocaleString()}</p>
+      <script>window.print()<\/script></body></html>`);
+  };
+
   return (
     <DashboardLayout>
       <div className="animate-fade-up">
+        {/* Status change message */}
+        {statusMsg && (
+          <div className="mb-4 p-3 rounded-lg bg-primary/15 border border-primary/40 glow-red-border flex items-center gap-2 animate-fade-up">
+            <MonitorSmartphone size={16} className="text-primary" />
+            <span className="text-xs text-primary font-semibold">{statusMsg}</span>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center gap-3 mb-4">
           <button onClick={() => navigate("/patients")} className="p-1.5 rounded-lg bg-secondary border border-border hover:border-primary/30 transition-all">
@@ -184,7 +235,6 @@ const PatientDetailPage = () => {
                 )}
               </div>
 
-              {/* ECG Waveform – only for live */}
               {isLive && (
                 <div className="mb-3 p-2 rounded bg-secondary border border-border">
                   <p className="text-[9px] text-muted-foreground mb-1">ECG Waveform</p>
@@ -192,7 +242,6 @@ const PatientDetailPage = () => {
                 </div>
               )}
 
-              {/* Vital Grid */}
               <div className="grid grid-cols-2 gap-2">
                 <VitalBox icon={Heart} label="Heart Rate" value={`${livePatient.vitals.hr}`} unit="BPM" danger={livePatient.vitals.hr > 110 || livePatient.vitals.hr < 50} />
                 <VitalBox icon={Activity} label="Blood Pressure" value={`${livePatient.vitals.bpSys}/${livePatient.vitals.bpDia}`} unit="mmHg" danger={livePatient.vitals.bpSys > 160} />
@@ -200,11 +249,8 @@ const PatientDetailPage = () => {
                 <VitalBox icon={Thermometer} label="Temperature" value={`${livePatient.vitals.temp.toFixed(1)}`} unit="°C" danger={livePatient.vitals.temp > 38.5} />
               </div>
 
-              {isLive && (
-                <p className="text-[9px] text-muted-foreground text-right mt-2">Last updated: {new Date().toLocaleTimeString()}</p>
-              )}
+              {isLive && <p className="text-[9px] text-muted-foreground text-right mt-2">Last updated: {new Date().toLocaleTimeString()}</p>}
 
-              {/* Manual vitals entry for non-live patients */}
               {!isLive && canEnterVitals && (
                 <div className="mt-3 pt-3 border-t border-border">
                   {!showManualForm ? (
@@ -238,7 +284,6 @@ const PatientDetailPage = () => {
                 </div>
               )}
 
-              {/* Manual vitals history */}
               {!isLive && livePatient.manualVitals.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-border">
                   <p className="text-[10px] text-muted-foreground mb-2">Vitals History</p>
@@ -277,31 +322,6 @@ const PatientDetailPage = () => {
                 </div>
               ) : (
                 <p className="text-[10px] text-muted-foreground italic">{livePatient.diagnosis ? "Diagnosis by attending physician." : "No diagnosis yet. Doctor access only."}</p>
-              )}
-            </div>
-
-            {/* Doctor Suggestions */}
-            <div className="stat-card">
-              <div className="flex items-center gap-2 mb-3">
-                <ClipboardList size={14} className="text-medical-blue" />
-                <h2 className="text-xs font-semibold text-foreground">Doctor's Suggestions</h2>
-              </div>
-              {livePatient.doctorSuggestions && (
-                <div className="mb-3 p-2 rounded-lg bg-medical-blue/5 border border-medical-blue/20">
-                  <p className="text-xs text-foreground">{livePatient.doctorSuggestions}</p>
-                </div>
-              )}
-              {canDiagnose ? (
-                <div className="space-y-2">
-                  <textarea value={suggestionsInput} onChange={e => setSuggestionsInput(e.target.value)}
-                    placeholder="Add clinical notes or suggestions..."
-                    className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all resize-none h-16" />
-                  <button onClick={handleSaveSuggestions} className="w-full py-1.5 rounded-lg bg-medical-blue/20 border border-medical-blue/30 text-xs text-medical-blue font-semibold hover:bg-medical-blue/30 transition-all">
-                    Save Suggestions
-                  </button>
-                </div>
-              ) : (
-                <p className="text-[10px] text-muted-foreground italic">{livePatient.doctorSuggestions || "No suggestions yet."}</p>
               )}
             </div>
           </div>
@@ -362,15 +382,52 @@ const PatientDetailPage = () => {
               </div>
             )}
 
-            {/* Tests */}
+            {/* Tests & Reports */}
             <div className="stat-card">
-              <h2 className="text-xs font-semibold text-foreground mb-3">Tests & Reports</h2>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-xs font-semibold text-foreground">Tests & Reports</h2>
+                <div className="flex items-center gap-2">
+                  <button onClick={handleFileUpload} className="flex items-center gap-1 px-2 py-1 rounded bg-secondary border border-border text-[10px] text-foreground hover:border-primary/30 transition-all">
+                    <Upload size={10} /> Upload
+                  </button>
+                  <button onClick={handleGeneratePDF} className="flex items-center gap-1 px-2 py-1 rounded bg-primary/10 border border-primary/20 text-[10px] text-primary hover:bg-primary/20 transition-all">
+                    <Download size={10} /> Download PDF
+                  </button>
+                </div>
+              </div>
               {livePatient.testsTaken.length > 0 && (
                 <div className="mb-3">
                   <p className="text-[10px] text-muted-foreground mb-1">Tests Taken</p>
                   <div className="flex flex-wrap gap-1">
                     {livePatient.testsTaken.map(t => (
                       <span key={t} className="px-2 py-0.5 rounded bg-medical-green/10 text-[10px] text-medical-green border border-medical-green/20">{t}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {livePatient.reports.length > 0 && (
+                <div className="mb-3">
+                  <p className="text-[10px] text-muted-foreground mb-1">Reports</p>
+                  <div className="space-y-1">
+                    {livePatient.reports.map((r, i) => (
+                      <div key={i} className="flex items-center gap-2 py-1 px-2 rounded bg-secondary border border-border">
+                        <FileText size={10} className="text-muted-foreground" />
+                        <span className="text-[10px] text-foreground flex-1">{r.name}</span>
+                        <span className="text-[9px] text-muted-foreground">{r.date}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {livePatient.uploadedFiles.length > 0 && (
+                <div className="mb-3">
+                  <p className="text-[10px] text-muted-foreground mb-1">Uploaded Files</p>
+                  <div className="space-y-1">
+                    {livePatient.uploadedFiles.map((f, i) => (
+                      <div key={i} className="flex items-center gap-2 py-1 px-2 rounded bg-secondary border border-border">
+                        <Upload size={10} className="text-muted-foreground" />
+                        <span className="text-[10px] text-foreground">{f}</span>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -410,17 +467,5 @@ const PatientDetailPage = () => {
     </DashboardLayout>
   );
 };
-
-const RiskBar = ({ label, value }: { label: string; value: number }) => (
-  <div>
-    <div className="flex items-center justify-between mb-1">
-      <span className="text-[10px] text-muted-foreground">{label}</span>
-      <span className={`text-[10px] font-bold ${value > 60 ? "text-primary" : value > 30 ? "text-medical-yellow" : "text-medical-green"}`}>{value}%</span>
-    </div>
-    <div className="h-1.5 rounded-full bg-secondary">
-      <div className={`h-full rounded-full transition-all duration-1000 ${value > 60 ? "bg-primary" : value > 30 ? "bg-medical-yellow" : "bg-medical-green"}`} style={{ width: `${value}%` }} />
-    </div>
-  </div>
-);
 
 export default PatientDetailPage;
