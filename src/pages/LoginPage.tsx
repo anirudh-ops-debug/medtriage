@@ -7,7 +7,7 @@ const roles = [
   { id: "admin", label: "Admin", description: "Full system access" },
   { id: "doctor", label: "Doctor", description: "Patient & triage access" },
   { id: "nurse", label: "Nurse", description: "Patient monitoring" },
-  { id: "organ_committee", label: "Organ Allocation Committee", description: "Transplant management" },
+  { id: "organ_committee", label: "Organ Committee", description: "Transplant management" },
 ];
 
 const LoginPage = () => {
@@ -29,12 +29,10 @@ const LoginPage = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center relative overflow-hidden">
-      {/* Ambient glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-20"
         style={{ background: "radial-gradient(circle, hsl(352 82% 38% / 0.3) 0%, transparent 70%)" }} />
 
       <div className="relative z-10 w-full max-w-md px-6 animate-fade-up">
-        {/* Medical Cross Icon */}
         <div className="flex flex-col items-center mb-8">
           <div className="relative mb-6">
             <div className="w-20 h-20 flex items-center justify-center rounded-2xl bg-primary/10 border border-primary/20 glow-red">
@@ -49,7 +47,6 @@ const LoginPage = () => {
           </p>
         </div>
 
-        {/* Login Form */}
         <form onSubmit={handleLogin} className="space-y-5">
           {/* Role Selection */}
           <div className="grid grid-cols-2 gap-2">
@@ -72,12 +69,13 @@ const LoginPage = () => {
             ))}
           </div>
 
-          {/* Username */}
+          {/* Email */}
           <div>
-            <label className="text-xs text-muted-foreground mb-1.5 block">Username</label>
+            <label className="text-xs text-muted-foreground mb-1.5 block">Email ID</label>
             <input
-              type="text"
-              defaultValue="admin"
+              type="email"
+              defaultValue="admin@medtriage.ai"
+              placeholder="Enter your email"
               className="w-full bg-secondary border border-border rounded-lg px-3 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
             />
           </div>
@@ -97,7 +95,6 @@ const LoginPage = () => {
             </div>
           </div>
 
-          {/* Login Button */}
           <button
             type="submit"
             className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg py-2.5 text-sm font-semibold transition-all duration-200 glow-red"
@@ -106,7 +103,6 @@ const LoginPage = () => {
             Secure Login
           </button>
 
-          {/* Emergency Access */}
           <button
             type="button"
             onClick={handleEmergencyAccess}

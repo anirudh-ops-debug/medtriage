@@ -1,7 +1,7 @@
 import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Search, Users, ChevronRight, Wifi, WifiOff, Barcode } from "lucide-react";
-import { usePatients, shouldShowLiveVitals } from "@/contexts/PatientContext";
+import { Search, Users, ChevronRight, Wifi, WifiOff, Barcode, MonitorSmartphone } from "lucide-react";
+import { usePatients, shouldShowLiveVitals, playPatientClickSound } from "@/contexts/PatientContext";
 import { useNavigate } from "react-router-dom";
 
 const riskColors: Record<string, string> = {
@@ -19,7 +19,7 @@ const riskRowStyles: Record<string, string> = {
 };
 
 const PatientListPage = () => {
-  const { patients } = usePatients();
+  const { patients, statusChangeMessages } = usePatients();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
 
@@ -29,13 +29,25 @@ const PatientListPage = () => {
     p.phone.includes(search)
   );
 
-  // Sort: Critical first, then High, Moderate, Stable
   const sortOrder = { Critical: 0, High: 1, Moderate: 2, Stable: 3 };
   const sorted = [...filtered].sort((a, b) => sortOrder[a.riskLevel] - sortOrder[b.riskLevel]);
+
+  const handlePatientClick = (p: typeof patients[0]) => {
+    playPatientClickSound(p.riskLevel);
+    navigate(`/patients/${p.id}`);
+  };
 
   return (
     <DashboardLayout>
       <div className="animate-fade-up">
+        {/* Status change messages */}
+        {Object.entries(statusChangeMessages).map(([pid, msg]) => (
+          <div key={pid} className="mb-3 p-3 rounded-lg bg-primary/15 border border-primary/40 glow-red-border flex items-center gap-2 animate-fade-up">
+            <MonitorSmartphone size={16} className="text-primary" />
+            <span className="text-xs text-primary font-semibold">{msg}</span>
+          </div>
+        ))}
+
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Users size={18} className="text-primary" />
@@ -44,26 +56,17 @@ const PatientListPage = () => {
               <p className="text-xs text-muted-foreground">{patients.length} patients registered</p>
             </div>
           </div>
-          <button
-            onClick={() => navigate("/register")}
-            className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-all"
-          >
+          <button onClick={() => navigate("/register")} className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-all">
             + Register New
           </button>
         </div>
 
-        {/* Search */}
         <div className="relative mb-4">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search by Patient ID, Name, or Phone..."
-            className="w-full bg-card border border-border rounded-lg pl-9 pr-3 py-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
-          />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by Patient ID, Name, or Phone..."
+            className="w-full bg-card border border-border rounded-lg pl-9 pr-3 py-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all" />
         </div>
 
-        {/* Table */}
         <div className="stat-card overflow-hidden p-0">
           <table className="w-full">
             <thead>
@@ -75,11 +78,8 @@ const PatientListPage = () => {
             </thead>
             <tbody>
               {sorted.map(p => (
-                <tr
-                  key={p.id}
-                  onClick={() => navigate(`/patients/${p.id}`)}
-                  className={`border-b border-border/50 border-l-2 cursor-pointer transition-all duration-300 hover:bg-secondary/50 ${riskRowStyles[p.riskLevel] || ""}`}
-                >
+                <tr key={p.id} onClick={() => handlePatientClick(p)}
+                  className={`border-b border-border/50 border-l-2 cursor-pointer transition-all duration-300 hover:bg-secondary/50 ${riskRowStyles[p.riskLevel] || ""}`}>
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-1.5">
                       <Barcode size={10} className="text-muted-foreground" />
@@ -95,28 +95,18 @@ const PatientListPage = () => {
                   </td>
                   <td className="py-3 px-4">
                     {shouldShowLiveVitals(p.riskLevel) ? (
-                      <span className="flex items-center gap-1 text-[10px] text-medical-green">
-                        <Wifi size={10} /> Live Monitor
-                      </span>
+                      <span className="flex items-center gap-1 text-[10px] text-medical-green"><Wifi size={10} /> Live Monitor</span>
                     ) : (
-                      <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                        <WifiOff size={10} /> Manual Entry
-                      </span>
+                      <span className="flex items-center gap-1 text-[10px] text-muted-foreground"><WifiOff size={10} /> Manual Entry</span>
                     )}
                   </td>
-                  <td className="py-3 px-4 text-xs text-muted-foreground truncate max-w-[120px]">
-                    {p.diagnosis || "—"}
-                  </td>
+                  <td className="py-3 px-4 text-xs text-muted-foreground truncate max-w-[120px]">{p.diagnosis || "—"}</td>
                   <td className="py-3 px-4 text-[10px] text-muted-foreground">{p.admissionDate}</td>
-                  <td className="py-3 px-4">
-                    <ChevronRight size={14} className="text-muted-foreground" />
-                  </td>
+                  <td className="py-3 px-4"><ChevronRight size={14} className="text-muted-foreground" /></td>
                 </tr>
               ))}
               {sorted.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="py-8 text-center text-xs text-muted-foreground">No patients found</td>
-                </tr>
+                <tr><td colSpan={8} className="py-8 text-center text-xs text-muted-foreground">No patients found</td></tr>
               )}
             </tbody>
           </table>
