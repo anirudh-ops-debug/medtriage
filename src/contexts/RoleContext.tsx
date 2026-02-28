@@ -1,6 +1,5 @@
-import { createContext, useContext, useState, ReactNode } from "react";
-
-export type UserRole = "admin" | "doctor" | "nurse" | "organ_committee";
+import { createContext, useContext, ReactNode } from "react";
+import { useAuth, UserRole } from "./AuthContext";
 
 interface RoleContextType {
   role: UserRole;
@@ -10,8 +9,10 @@ interface RoleContextType {
 const RoleContext = createContext<RoleContextType>({ role: "admin", setRole: () => {} });
 
 export const RoleProvider = ({ children }: { children: ReactNode }) => {
-  const [role, setRole] = useState<UserRole>("admin");
-  return <RoleContext.Provider value={{ role, setRole }}>{children}</RoleContext.Provider>;
+  const { role } = useAuth();
+  // setRole is a no-op now — role comes from database
+  return <RoleContext.Provider value={{ role, setRole: () => {} }}>{children}</RoleContext.Provider>;
 };
 
 export const useRole = () => useContext(RoleContext);
+export type { UserRole };

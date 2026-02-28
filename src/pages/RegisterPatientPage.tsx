@@ -14,7 +14,7 @@ const RegisterPatientPage = () => {
   const [registered, setRegistered] = useState<Patient | null>(null);
   const [existingFound, setExistingFound] = useState(false);
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (!name.trim() || !age || !phone.trim()) return;
     const existing = patients.find(p => p.phone === phone);
     if (existing) {
@@ -22,9 +22,11 @@ const RegisterPatientPage = () => {
       setExistingFound(true);
       return;
     }
-    const patient = registerPatient(name.trim(), parseInt(age), phone.trim(), gender);
-    setRegistered(patient);
-    setExistingFound(false);
+    const patient = await registerPatient(name.trim(), parseInt(age), phone.trim(), gender);
+    if (patient) {
+      setRegistered(patient);
+      setExistingFound(false);
+    }
   };
 
   const handlePrint = () => {

@@ -1,9 +1,10 @@
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Activity, Users, Building2, Heart, Cpu,
   Rocket, Settings, LogOut, Cross, Accessibility, UserPlus, List
 } from "lucide-react";
 import { useRole } from "@/contexts/RoleContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -21,7 +22,9 @@ const navItems = [
 
 const AppSidebar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { role } = useRole();
+  const { signOut } = useAuth();
 
   return (
     <aside className="w-60 h-screen bg-sidebar border-r border-sidebar-border flex flex-col fixed left-0 top-0 z-40">
@@ -59,10 +62,13 @@ const AppSidebar = () => {
 
       {/* Footer */}
       <div className="p-3 border-t border-sidebar-border">
-        <NavLink to="/" className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground hover:text-primary transition-colors rounded-lg hover:bg-sidebar-accent">
+        <button
+          onClick={async () => { await signOut(); navigate("/"); }}
+          className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground hover:text-primary transition-colors rounded-lg hover:bg-sidebar-accent w-full"
+        >
           <LogOut size={14} />
           Logout
-        </NavLink>
+        </button>
       </div>
     </aside>
   );
