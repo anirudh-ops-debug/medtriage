@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "./AuthContext";
 
 export interface PatientVitals {
   hr: number;
@@ -22,6 +24,7 @@ export interface PatientReport {
 
 export interface Patient {
   id: string;
+  dbId: string; // UUID from database
   name: string;
   age: number;
   gender: string;
@@ -59,10 +62,8 @@ const classifyVitalSeverity = (v: PatientVitals): Severity => {
   if (v.temp >= 38.5 && v.temp <= 39.5) return "High";
 
   const hrMod = v.hr >= 91 && v.hr <= 110;
-  const bpMod = v.bpSys >= 90 && v.bpSys <= 160;
   const spo2Mod = v.spo2 >= 93 && v.spo2 <= 95;
   const tempMod = v.temp >= 37.5 && v.temp <= 38.4;
-  if (hrMod && bpMod && spo2Mod && tempMod) return "Moderate";
   if (hrMod || spo2Mod || tempMod) return "Moderate";
 
   return "Stable";
@@ -111,7 +112,6 @@ export const playHighRiskAlert = () => {
   } catch {}
 };
 
-// Soft click sound for selecting Critical/High patients
 export const playPatientClickSound = (level: Severity) => {
   if (level !== "Critical" && level !== "High") return;
   try {
@@ -128,128 +128,133 @@ export const playPatientClickSound = (level: Severity) => {
   } catch {}
 };
 
-// ─── Helpers ─────────────────────────────────────────────────────────
-const generateVital = (base: number, range: number) => Math.round(base + (Math.random() - 0.5) * range);
-const generateBarcode = () => {
-  const chars = "0123456789";
-  let code = "MED";
-  for (let i = 0; i < 10; i++) code += chars[Math.floor(Math.random() * chars.length)];
-  return code;
-};
-
-let nextId = 6;
-const generateId = () => `PT-${String(nextId++).padStart(3, "0")}`;
-
-// ─── Initial Data ────────────────────────────────────────────────────
-const initialPatients: Patient[] = [
-  { id: "PT-001", name: "Rajesh Kumar", age: 62, gender: "M", phone: "9876543210", connected: true, vitals: { hr: 112, bpSys: 155, bpDia: 98, spo2: 91, temp: 38.8 }, manualVitals: [], riskLevel: "Critical", complications: ["Cardiac Arrest Risk", "Hypoxemia"], oxygenDropRisk: 78, cardiacRisk: 65, diagnosis: "", admissionDate: "2026-02-18", symptoms: ["Chest Pain", "Dyspnea"], testsTaken: ["ECG", "Troponin"], testsNeeded: ["Angiography"], reports: [{ name: "ECG Report", date: "2026-02-18", type: "lab" }, { name: "Troponin Levels", date: "2026-02-18", type: "lab" }], medicalHistory: ["Hypertension", "Previous MI 2024"], barcode: "MED0010000001", uploadedFiles: [] },
-  { id: "PT-002", name: "Priya Sharma", age: 45, gender: "F", phone: "9876543211", connected: true, vitals: { hr: 88, bpSys: 130, bpDia: 85, spo2: 95, temp: 37.6 }, manualVitals: [], riskLevel: "Moderate", complications: ["Mild Hypertension"], oxygenDropRisk: 22, cardiacRisk: 15, diagnosis: "", admissionDate: "2026-02-19", symptoms: ["Headache", "Nausea"], testsTaken: ["CBC"], testsNeeded: ["MRI Brain"], reports: [{ name: "CBC Report", date: "2026-02-19", type: "lab" }], medicalHistory: [], barcode: "MED0020000002", uploadedFiles: [] },
-  { id: "PT-003", name: "Amit Patel", age: 71, gender: "M", phone: "9876543212", connected: true, vitals: { hr: 125, bpSys: 170, bpDia: 105, spo2: 88, temp: 39.2 }, manualVitals: [], riskLevel: "Critical", complications: ["Sepsis Suspected", "Respiratory Failure"], oxygenDropRisk: 89, cardiacRisk: 72, diagnosis: "", admissionDate: "2026-02-17", symptoms: ["High Fever", "Confusion", "Tachycardia"], testsTaken: ["Blood Culture", "ABG"], testsNeeded: ["CT Chest"], reports: [{ name: "Blood Culture", date: "2026-02-17", type: "lab" }, { name: "ABG Analysis", date: "2026-02-17", type: "lab" }], medicalHistory: ["COPD", "Diabetes Type 2"], barcode: "MED0030000003", uploadedFiles: [] },
-  { id: "PT-004", name: "Sunita Devi", age: 34, gender: "F", phone: "9876543213", connected: false, vitals: { hr: 76, bpSys: 118, bpDia: 76, spo2: 98, temp: 36.9 }, manualVitals: [], riskLevel: "Stable", complications: [], oxygenDropRisk: 5, cardiacRisk: 3, diagnosis: "", admissionDate: "2026-02-20", symptoms: ["Mild Cough"], testsTaken: [], testsNeeded: ["Chest X-Ray"], reports: [], medicalHistory: [], barcode: "MED0040000004", uploadedFiles: [] },
-  { id: "PT-005", name: "Mohammed Iqbal", age: 58, gender: "M", phone: "9876543214", connected: false, vitals: { hr: 98, bpSys: 142, bpDia: 92, spo2: 93, temp: 38.1 }, manualVitals: [], riskLevel: "High", complications: ["Diabetic Emergency"], oxygenDropRisk: 45, cardiacRisk: 38, diagnosis: "", admissionDate: "2026-02-19", symptoms: ["Polyuria", "Fatigue", "Blurred Vision"], testsTaken: ["Blood Glucose", "HbA1c"], testsNeeded: ["BMP", "ABG"], reports: [{ name: "Blood Glucose", date: "2026-02-19", type: "lab" }, { name: "HbA1c Report", date: "2026-02-19", type: "lab" }], medicalHistory: ["Type 2 Diabetes", "Retinopathy"], barcode: "MED0050000005", uploadedFiles: [] },
-];
-
 // ─── Context ─────────────────────────────────────────────────────────
 interface PatientContextType {
   patients: Patient[];
   setPatients: React.Dispatch<React.SetStateAction<Patient[]>>;
-  registerPatient: (name: string, age: number, phone: string, gender: string) => Patient;
-  updateDiagnosis: (id: string, diagnosis: string) => void;
-  addManualVitals: (id: string, vitals: PatientVitals, recordedBy: string) => void;
+  registerPatient: (name: string, age: number, phone: string, gender: string) => Promise<Patient | null>;
+  updateDiagnosis: (id: string, diagnosis: string) => Promise<void>;
+  addManualVitals: (id: string, vitals: PatientVitals, recordedBy: string) => Promise<void>;
   addUploadedFile: (id: string, fileName: string) => void;
   getPatient: (id: string) => Patient | undefined;
   classifyVitals: (v: PatientVitals) => Severity;
   statusChangeMessages: Record<string, string>;
+  loading: boolean;
+  refreshPatients: () => Promise<void>;
 }
 
 const PatientContext = createContext<PatientContextType>({
   patients: [],
   setPatients: () => {},
-  registerPatient: () => initialPatients[0],
-  updateDiagnosis: () => {},
-  addManualVitals: () => {},
+  registerPatient: async () => null,
+  updateDiagnosis: async () => {},
+  addManualVitals: async () => {},
   addUploadedFile: () => {},
   getPatient: () => undefined,
   classifyVitals: () => "Stable",
   statusChangeMessages: {},
+  loading: true,
+  refreshPatients: async () => {},
 });
 
+// Helper to map DB rows to Patient interface
+const mapDbToPatient = (
+  p: any,
+  vitals: any,
+  triage: any,
+  reports: any[],
+  vitalHistory: any[]
+): Patient => {
+  const latestVitals: PatientVitals = vitals
+    ? { hr: vitals.heart_rate, bpSys: vitals.blood_pressure_sys, bpDia: vitals.blood_pressure_dia, spo2: vitals.spo2, temp: Number(vitals.temperature) }
+    : { hr: 72, bpSys: 120, bpDia: 80, spo2: 98, temp: 36.8 };
+
+  const riskLevel = (triage?.risk_level as Severity) || classifyVitalSeverity(latestVitals);
+
+  return {
+    id: p.patient_code,
+    dbId: p.id,
+    name: p.name,
+    age: p.age,
+    gender: p.gender,
+    phone: p.phone,
+    connected: riskLevel === "Critical" || riskLevel === "High",
+    vitals: latestVitals,
+    manualVitals: vitalHistory.map((v: any) => ({
+      vitals: { hr: v.heart_rate, bpSys: v.blood_pressure_sys, bpDia: v.blood_pressure_dia, spo2: v.spo2, temp: Number(v.temperature) },
+      recordedAt: new Date(v.recorded_at).toLocaleString(),
+      recordedBy: v.recorded_by || "System",
+    })),
+    riskLevel,
+    complications: triage?.complications || [],
+    oxygenDropRisk: triage?.oxygen_drop_risk || 0,
+    cardiacRisk: triage?.cardiac_risk || 0,
+    diagnosis: p.diagnosis || "",
+    admissionDate: p.admission_date,
+    symptoms: triage?.symptoms || [],
+    testsTaken: triage?.tests_taken || [],
+    testsNeeded: triage?.tests_needed || [],
+    reports: reports.map((r: any) => ({ name: r.file_name, date: r.created_at?.split("T")[0] || "", type: r.report_type as "lab" | "imaging" | "uploaded" })),
+    medicalHistory: triage?.medical_history || [],
+    barcode: p.barcode,
+    uploadedFiles: reports.filter((r: any) => r.report_type === "uploaded").map((r: any) => r.file_name),
+  };
+};
+
 export const PatientProvider = ({ children }: { children: ReactNode }) => {
-  const [patients, setPatients] = useState<Patient[]>(initialPatients);
+  const [patients, setPatients] = useState<Patient[]>([]);
   const [prevRiskLevels, setPrevRiskLevels] = useState<Record<string, Severity>>({});
   const [statusChangeMessages, setStatusChangeMessages] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
-  const registerPatient = useCallback((name: string, age: number, phone: string, gender: string): Patient => {
-    const existing = patients.find(p => p.phone === phone);
-    if (existing) return existing;
+  const fetchAllPatients = useCallback(async () => {
+    if (!user) { setPatients([]); setLoading(false); return; }
+    
+    const { data: patientsData } = await supabase.from("patients").select("*").order("created_at", { ascending: false });
+    if (!patientsData || patientsData.length === 0) { setPatients([]); setLoading(false); return; }
 
-    const newPatient: Patient = {
-      id: generateId(),
-      name, age, gender, phone,
-      connected: false,
-      vitals: { hr: 72, bpSys: 120, bpDia: 80, spo2: 98, temp: 36.8 },
-      manualVitals: [],
-      riskLevel: "Stable",
-      complications: [],
-      oxygenDropRisk: 2,
-      cardiacRisk: 1,
-      diagnosis: "",
-      admissionDate: new Date().toISOString().split("T")[0],
-      symptoms: [],
-      testsTaken: [],
-      testsNeeded: [],
-      reports: [],
-      medicalHistory: [],
-      barcode: generateBarcode(),
-      uploadedFiles: [],
-    };
-    setPatients(prev => [...prev, newPatient]);
-    return newPatient;
-  }, [patients]);
+    const patientIds = patientsData.map(p => p.id);
 
-  const updateDiagnosis = useCallback((id: string, diagnosis: string) => {
-    setPatients(prev => prev.map(p => p.id === id ? { ...p, diagnosis } : p));
-  }, []);
+    const [vitalsRes, triageRes, reportsRes] = await Promise.all([
+      supabase.from("vitals").select("*").in("patient_id", patientIds).order("recorded_at", { ascending: false }),
+      supabase.from("triage").select("*").in("patient_id", patientIds),
+      supabase.from("patient_reports").select("*").in("patient_id", patientIds),
+    ]);
 
-  const addManualVitals = useCallback((id: string, vitals: PatientVitals, recordedBy: string) => {
-    setPatients(prev => prev.map(p => {
-      if (p.id !== id) return p;
-      const entry: ManualVitalEntry = { vitals, recordedAt: new Date().toLocaleString(), recordedBy };
-      const newRisk = classifyVitalSeverity(vitals);
-      return { ...p, vitals, manualVitals: [...p.manualVitals, entry], riskLevel: newRisk };
-    }));
-  }, []);
+    const vitalsMap: Record<string, any> = {};
+    const vitalsHistoryMap: Record<string, any[]> = {};
+    (vitalsRes.data || []).forEach(v => {
+      if (!vitalsMap[v.patient_id]) vitalsMap[v.patient_id] = v;
+      if (!vitalsHistoryMap[v.patient_id]) vitalsHistoryMap[v.patient_id] = [];
+      vitalsHistoryMap[v.patient_id].push(v);
+    });
 
-  const addUploadedFile = useCallback((id: string, fileName: string) => {
-    setPatients(prev => prev.map(p => p.id === id ? { ...p, uploadedFiles: [...p.uploadedFiles, fileName] } : p));
-  }, []);
+    const triageMap: Record<string, any> = {};
+    (triageRes.data || []).forEach(t => { triageMap[t.patient_id] = t; });
 
-  const getPatient = useCallback((id: string) => patients.find(p => p.id === id), [patients]);
+    const reportsMap: Record<string, any[]> = {};
+    (reportsRes.data || []).forEach(r => {
+      if (!reportsMap[r.patient_id]) reportsMap[r.patient_id] = [];
+      reportsMap[r.patient_id].push(r);
+    });
 
-  // Simulate live vitals for connected Critical/High patients
+    const mapped = patientsData.map(p =>
+      mapDbToPatient(p, vitalsMap[p.id], triageMap[p.id], reportsMap[p.id] || [], vitalsHistoryMap[p.id] || [])
+    );
+
+    setPatients(mapped);
+    setLoading(false);
+  }, [user]);
+
+  useEffect(() => { fetchAllPatients(); }, [fetchAllPatients]);
+
+  // Poll for updates every 5 seconds
   useEffect(() => {
-    const interval = setInterval(() => {
-      setPatients(prev => prev.map(p => {
-        if (!p.connected || !shouldShowLiveVitals(p.riskLevel)) return p;
-        const newVitals: PatientVitals = {
-          hr: generateVital(p.vitals.hr, 8),
-          bpSys: generateVital(p.vitals.bpSys, 6),
-          bpDia: generateVital(p.vitals.bpDia, 4),
-          spo2: Math.min(100, Math.max(80, generateVital(p.vitals.spo2, 3))),
-          temp: Math.round((p.vitals.temp + (Math.random() - 0.5) * 0.3) * 10) / 10,
-        };
-        const newRisk = classifyVitalSeverity(newVitals);
-        return {
-          ...p,
-          vitals: newVitals,
-          riskLevel: newRisk,
-          oxygenDropRisk: Math.min(99, Math.max(5, generateVital(p.oxygenDropRisk, 5))),
-          cardiacRisk: Math.min(99, Math.max(3, generateVital(p.cardiacRisk, 4))),
-        };
-      }));
-    }, 2000);
+    if (!user) return;
+    const interval = setInterval(fetchAllPatients, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [user, fetchAllPatients]);
 
   // Detect status changes and trigger alerts
   useEffect(() => {
@@ -260,7 +265,6 @@ export const PatientProvider = ({ children }: { children: ReactNode }) => {
         playCriticalAlert();
         newMessages[p.id] = `⚠️ ${p.name} needs to be connected to a vital sign monitor`;
       }
-      // Sound alert when patient becomes critical from non-critical
       if (prev && prev !== "Critical" && p.riskLevel === "Critical") {
         playCriticalAlert();
       } else if (prev && prev !== "High" && prev !== "Critical" && p.riskLevel === "High") {
@@ -269,7 +273,6 @@ export const PatientProvider = ({ children }: { children: ReactNode }) => {
     });
     if (Object.keys(newMessages).length > 0) {
       setStatusChangeMessages(prev => ({ ...prev, ...newMessages }));
-      // Auto-clear messages after 8 seconds
       setTimeout(() => {
         setStatusChangeMessages(prev => {
           const next = { ...prev };
@@ -283,8 +286,83 @@ export const PatientProvider = ({ children }: { children: ReactNode }) => {
     setPrevRiskLevels(levels);
   }, [patients]);
 
+  const registerPatient = useCallback(async (name: string, age: number, phone: string, gender: string): Promise<Patient | null> => {
+    if (!user) return null;
+
+    // Check for existing patient by phone
+    const { data: existing } = await supabase.from("patients").select("patient_code").eq("phone", phone).maybeSingle();
+    if (existing) {
+      const found = patients.find(p => p.id === existing.patient_code);
+      return found || null;
+    }
+
+    const barcode = "MED" + Math.floor(Math.random() * 10000000000).toString().padStart(10, "0");
+    const patientCode = "PT-" + Math.floor(Math.random() * 900 + 100).toString();
+
+    const { data: newPatient, error } = await supabase.from("patients").insert({
+      patient_code: patientCode,
+      name, age, gender, phone, barcode,
+      created_by: user.id,
+    }).select().single();
+
+    if (error || !newPatient) return null;
+
+    // Create initial vitals and triage entries
+    await Promise.all([
+      supabase.from("vitals").insert({ patient_id: newPatient.id, recorded_by: user.id }),
+      supabase.from("triage").insert({ patient_id: newPatient.id }),
+    ]);
+
+    await fetchAllPatients();
+    return patients.find(p => p.dbId === newPatient.id) || {
+      id: newPatient.patient_code, dbId: newPatient.id, name, age, gender, phone,
+      connected: false, vitals: { hr: 72, bpSys: 120, bpDia: 80, spo2: 98, temp: 36.8 },
+      manualVitals: [], riskLevel: "Stable", complications: [], oxygenDropRisk: 0, cardiacRisk: 0,
+      diagnosis: "", admissionDate: newPatient.admission_date, symptoms: [], testsTaken: [],
+      testsNeeded: [], reports: [], medicalHistory: [], barcode: newPatient.barcode, uploadedFiles: [],
+    };
+  }, [user, patients, fetchAllPatients]);
+
+  const updateDiagnosis = useCallback(async (id: string, diagnosis: string) => {
+    const patient = patients.find(p => p.id === id);
+    if (!patient) return;
+    await supabase.from("patients").update({ diagnosis }).eq("id", patient.dbId);
+    await fetchAllPatients();
+  }, [patients, fetchAllPatients]);
+
+  const addManualVitals = useCallback(async (id: string, vitals: PatientVitals, recordedBy: string) => {
+    const patient = patients.find(p => p.id === id);
+    if (!patient || !user) return;
+    await supabase.from("vitals").insert({
+      patient_id: patient.dbId,
+      heart_rate: vitals.hr,
+      blood_pressure_sys: vitals.bpSys,
+      blood_pressure_dia: vitals.bpDia,
+      spo2: vitals.spo2,
+      temperature: vitals.temp,
+      recorded_by: user.id,
+    });
+    await fetchAllPatients();
+  }, [patients, user, fetchAllPatients]);
+
+  const addUploadedFile = useCallback((id: string, fileName: string) => {
+    const patient = patients.find(p => p.id === id);
+    if (!patient) return;
+    supabase.from("patient_reports").insert({
+      patient_id: patient.dbId,
+      file_name: fileName,
+      report_type: "uploaded",
+    }).then(() => fetchAllPatients());
+  }, [patients, fetchAllPatients]);
+
+  const getPatient = useCallback((id: string) => patients.find(p => p.id === id), [patients]);
+
   return (
-    <PatientContext.Provider value={{ patients, setPatients, registerPatient, updateDiagnosis, addManualVitals, addUploadedFile, getPatient, classifyVitals: classifyVitalSeverity, statusChangeMessages }}>
+    <PatientContext.Provider value={{
+      patients, setPatients, registerPatient, updateDiagnosis, addManualVitals,
+      addUploadedFile, getPatient, classifyVitals: classifyVitalSeverity,
+      statusChangeMessages, loading, refreshPatients: fetchAllPatients,
+    }}>
       {children}
     </PatientContext.Provider>
   );

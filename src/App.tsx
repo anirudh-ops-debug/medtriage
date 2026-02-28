@@ -17,38 +17,44 @@ import RegisterPatientPage from "./pages/RegisterPatientPage";
 import PatientListPage from "./pages/PatientListPage";
 import PatientDetailPage from "./pages/PatientDetailPage";
 import NotFound from "./pages/NotFound";
+import { AuthProvider } from "./contexts/AuthContext";
 import { RoleProvider } from "./contexts/RoleContext";
 import { PatientProvider } from "./contexts/PatientContext";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
+
+const P = ({ children }: { children: React.ReactNode }) => <ProtectedRoute>{children}</ProtectedRoute>;
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <RoleProvider>
-        <PatientProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<LoginPage />} />
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/triage" element={<TriagePage />} />
-              <Route path="/queue" element={<QueuePage />} />
-              <Route path="/deterioration" element={<DeteriorationPage />} />
-              <Route path="/resources" element={<ResourcesPage />} />
-              <Route path="/organs" element={<OrganAllocationPage />} />
-              <Route path="/accessibility" element={<AccessibilityPage />} />
-              <Route path="/architecture" element={<ArchitecturePage />} />
-              <Route path="/future" element={<FutureScopePage />} />
-              <Route path="/register" element={<RegisterPatientPage />} />
-              <Route path="/patients" element={<PatientListPage />} />
-              <Route path="/patients/:id" element={<PatientDetailPage />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </PatientProvider>
-      </RoleProvider>
+      <AuthProvider>
+        <RoleProvider>
+          <PatientProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<LoginPage />} />
+                <Route path="/dashboard" element={<P><DashboardPage /></P>} />
+                <Route path="/triage" element={<P><TriagePage /></P>} />
+                <Route path="/queue" element={<P><QueuePage /></P>} />
+                <Route path="/deterioration" element={<P><DeteriorationPage /></P>} />
+                <Route path="/resources" element={<P><ResourcesPage /></P>} />
+                <Route path="/organs" element={<P><OrganAllocationPage /></P>} />
+                <Route path="/accessibility" element={<P><AccessibilityPage /></P>} />
+                <Route path="/architecture" element={<P><ArchitecturePage /></P>} />
+                <Route path="/future" element={<P><FutureScopePage /></P>} />
+                <Route path="/register" element={<P><RegisterPatientPage /></P>} />
+                <Route path="/patients" element={<P><PatientListPage /></P>} />
+                <Route path="/patients/:id" element={<P><PatientDetailPage /></P>} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </PatientProvider>
+        </RoleProvider>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
