@@ -249,11 +249,25 @@ export const PatientProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => { fetchAllPatients(); }, [fetchAllPatients]);
 
-  // Poll for updates every 5 seconds
+  // Realtime subscriptions + polling fallback
   useEffect(() => {
     if (!user) return;
-    const interval = setInterval(fetchAllPatients, 5000);
-    return () => clearInterval(interval);
+
+    // Subscribe to realtime changes
+    const channel = supabase
+      .channel("patient_data_changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "patients" }, () => fetchAllPatients())
+      .on("postgres_changes", { event: "*", schema: "public", table: "vitals" }, () => fetchAllPatients())
+      .on("postgres_changes", { event: "*", schema: "public", table: "triage" }, () => fetchAllPatients())
+      .subscribe();
+
+    // Polling fallback every 10 seconds
+    const interval = setInterval(fetchAllPatients, 10000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
   }, [user, fetchAllPatients]);
 
   // Detect status changes and trigger alerts
