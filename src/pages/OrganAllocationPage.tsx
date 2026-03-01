@@ -1,47 +1,69 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { usePatients } from "@/contexts/PatientContext";
 import { useRole } from "@/contexts/RoleContext";
-import { Heart, Clock, TrendingUp, Shield, CheckCircle, AlertTriangle, Barcode, ChevronRight, Pencil, Check, X } from "lucide-react";
-
-interface OrganEntry {
-  organ: string;
-  donor: string;
-  bloodType: string;
-  status: "Available" | "Matched" | "Allocated";
-  recipientPatientId: string;
-}
-
-const initialOrgans: OrganEntry[] = [
-  { organ: "Kidney (Left)", donor: "Cadaveric #KD-441", bloodType: "O+", status: "Matched", recipientPatientId: "PT-001" },
-  { organ: "Liver (Partial)", donor: "Living Donor #LV-203", bloodType: "B+", status: "Available", recipientPatientId: "" },
-  { organ: "Heart", donor: "Cadaveric #HT-112", bloodType: "A+", status: "Available", recipientPatientId: "" },
-];
+import { supabase } from "@/integrations/supabase/client";
+import { Heart, Clock, TrendingUp, Shield, CheckCircle, AlertTriangle, Barcode, ChevronRight, Pencil, Check, X, Plus } from "lucide-react";
+import { toast } from "sonner";
 
 const OrganAllocationPage = () => {
   const navigate = useNavigate();
   const { patients } = usePatients();
   const { role } = useRole();
-  const canEdit = role === "doctor" || role === "admin";
-  const [organs, setOrgans] = useState(initialOrgans);
+  const canEdit = role === "doctor" || role === "admin" || role === "organ_committee";
+
+  const [organs, setOrgans] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [editIdx, setEditIdx] = useState<number | null>(null);
-  const [editData, setEditData] = useState<OrganEntry | null>(null);
+  const [editData, setEditData] = useState<any>(null);
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newOrgan, setNewOrgan] = useState({ organ_name: "", donor_details: "", blood_type: "", status: "Available" });
 
   const selectedPatient = selectedPatientId ? patients.find(p => p.id === selectedPatientId) : null;
+
+  const fetchOrgans = async () => {
+    const { data } = await supabase.from("organ_inventory").select("*").order("created_at", { ascending: false });
+    setOrgans(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchOrgans(); }, []);
+
+  // Realtime subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel("organ_inventory_changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "organ_inventory" }, () => fetchOrgans())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   const handleEdit = (idx: number) => {
     setEditIdx(idx);
     setEditData({ ...organs[idx] });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (editIdx !== null && editData) {
-      setOrgans(prev => prev.map((o, i) => i === editIdx ? editData : o));
+      const { error } = await supabase.from("organ_inventory").update({
+        organ_name: editData.organ_name,
+        donor_details: editData.donor_details,
+        blood_type: editData.blood_type,
+        status: editData.status,
+      }).eq("id", editData.id);
+      if (error) toast.error("Failed to update organ");
+      else { toast.success("Organ updated"); await fetchOrgans(); }
       setEditIdx(null);
       setEditData(null);
     }
+  };
+
+  const handleAddOrgan = async () => {
+    const { error } = await supabase.from("organ_inventory").insert(newOrgan);
+    if (error) toast.error("Failed to add organ");
+    else { toast.success("Organ added"); setShowAdd(false); setNewOrgan({ organ_name: "", donor_details: "", blood_type: "", status: "Available" }); await fetchOrgans(); }
   };
 
   const statusColors: Record<string, string> = {
@@ -57,71 +79,102 @@ const OrganAllocationPage = () => {
         <p className="text-xs text-muted-foreground mb-6">Transparent AI-based ranking · Indian Transplant Guidelines Compliant</p>
 
         <div className="grid grid-cols-12 gap-4">
-          {/* Left – Organ list + Patient list */}
           <div className="col-span-7 space-y-4">
-            {/* Organs */}
             <div className="stat-card">
-              <h2 className="text-xs font-semibold text-foreground mb-3">Available Organs</h2>
-              <div className="space-y-2">
-                {organs.map((o, i) => (
-                  <div key={i} className="p-3 rounded-lg border border-border bg-secondary">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <Heart size={14} className="text-primary" />
-                        <span className="text-xs font-semibold text-foreground">{o.organ}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${statusColors[o.status]}`}>{o.status}</span>
-                        {canEdit && editIdx !== i && (
-                          <button onClick={() => handleEdit(i)} className="p-1 rounded hover:bg-primary/10"><Pencil size={11} className="text-primary" /></button>
-                        )}
-                      </div>
-                    </div>
-                    {editIdx === i && editData ? (
-                      <div className="space-y-2 mt-2 pt-2 border-t border-border">
-                        <div className="grid grid-cols-3 gap-2">
-                          <div>
-                            <label className="text-[9px] text-muted-foreground">Donor</label>
-                            <input value={editData.donor} onChange={e => setEditData({ ...editData, donor: e.target.value })}
-                              className="w-full bg-card border border-border rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:border-primary/50" />
-                          </div>
-                          <div>
-                            <label className="text-[9px] text-muted-foreground">Blood Type</label>
-                            <input value={editData.bloodType} onChange={e => setEditData({ ...editData, bloodType: e.target.value })}
-                              className="w-full bg-card border border-border rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:border-primary/50" />
-                          </div>
-                          <div>
-                            <label className="text-[9px] text-muted-foreground">Status</label>
-                            <select value={editData.status} onChange={e => setEditData({ ...editData, status: e.target.value as OrganEntry["status"] })}
-                              className="w-full bg-card border border-border rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:border-primary/50">
-                              <option value="Available">Available</option>
-                              <option value="Matched">Matched</option>
-                              <option value="Allocated">Allocated</option>
-                            </select>
-                          </div>
-                        </div>
-                        <div>
-                          <label className="text-[9px] text-muted-foreground">Recipient Patient ID</label>
-                          <input value={editData.recipientPatientId} onChange={e => setEditData({ ...editData, recipientPatientId: e.target.value })}
-                            placeholder="e.g. PT-001"
-                            className="w-full bg-card border border-border rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:border-primary/50" />
-                        </div>
-                        <div className="flex gap-2">
-                          <button onClick={handleSave} className="flex items-center gap-1 px-3 py-1 rounded bg-primary text-primary-foreground text-xs font-semibold"><Check size={12} /> Save</button>
-                          <button onClick={() => { setEditIdx(null); setEditData(null); }} className="flex items-center gap-1 px-3 py-1 rounded bg-secondary border border-border text-xs text-muted-foreground"><X size={12} /> Cancel</button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-[10px] text-muted-foreground">
-                        {o.donor} · Blood: {o.bloodType} {o.recipientPatientId && `· Recipient: ${o.recipientPatientId}`}
-                      </div>
-                    )}
-                  </div>
-                ))}
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-xs font-semibold text-foreground">Available Organs</h2>
+                {canEdit && (
+                  <button onClick={() => setShowAdd(!showAdd)} className="flex items-center gap-1 px-2 py-1 rounded bg-primary text-primary-foreground text-[10px] font-semibold">
+                    <Plus size={10} /> Add Organ
+                  </button>
+                )}
               </div>
+
+              {showAdd && (
+                <div className="p-3 rounded-lg border border-primary/20 bg-primary/5 mb-3 space-y-2">
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className="text-[9px] text-muted-foreground">Organ Name</label>
+                      <input value={newOrgan.organ_name} onChange={e => setNewOrgan({ ...newOrgan, organ_name: e.target.value })}
+                        className="w-full bg-card border border-border rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:border-primary/50" />
+                    </div>
+                    <div>
+                      <label className="text-[9px] text-muted-foreground">Blood Type</label>
+                      <input value={newOrgan.blood_type} onChange={e => setNewOrgan({ ...newOrgan, blood_type: e.target.value })}
+                        className="w-full bg-card border border-border rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:border-primary/50" />
+                    </div>
+                    <div>
+                      <label className="text-[9px] text-muted-foreground">Donor Details</label>
+                      <input value={newOrgan.donor_details} onChange={e => setNewOrgan({ ...newOrgan, donor_details: e.target.value })}
+                        className="w-full bg-card border border-border rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:border-primary/50" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={handleAddOrgan} className="flex items-center gap-1 px-3 py-1 rounded bg-primary text-primary-foreground text-xs font-semibold"><Check size={12} /> Save</button>
+                    <button onClick={() => setShowAdd(false)} className="flex items-center gap-1 px-3 py-1 rounded bg-secondary border border-border text-xs text-muted-foreground"><X size={12} /> Cancel</button>
+                  </div>
+                </div>
+              )}
+
+              {loading ? (
+                <p className="text-xs text-muted-foreground py-4 text-center">Loading organs...</p>
+              ) : organs.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-4 text-center">No organs in inventory</p>
+              ) : (
+                <div className="space-y-2">
+                  {organs.map((o, i) => (
+                    <div key={o.id} className="p-3 rounded-lg border border-border bg-secondary">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Heart size={14} className="text-primary" />
+                          <span className="text-xs font-semibold text-foreground">{o.organ_name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${statusColors[o.status] || ""}`}>{o.status}</span>
+                          {canEdit && editIdx !== i && (
+                            <button onClick={() => handleEdit(i)} className="p-1 rounded hover:bg-primary/10"><Pencil size={11} className="text-primary" /></button>
+                          )}
+                        </div>
+                      </div>
+                      {editIdx === i && editData ? (
+                        <div className="space-y-2 mt-2 pt-2 border-t border-border">
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <label className="text-[9px] text-muted-foreground">Donor</label>
+                              <input value={editData.donor_details || ""} onChange={e => setEditData({ ...editData, donor_details: e.target.value })}
+                                className="w-full bg-card border border-border rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:border-primary/50" />
+                            </div>
+                            <div>
+                              <label className="text-[9px] text-muted-foreground">Blood Type</label>
+                              <input value={editData.blood_type || ""} onChange={e => setEditData({ ...editData, blood_type: e.target.value })}
+                                className="w-full bg-card border border-border rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:border-primary/50" />
+                            </div>
+                            <div>
+                              <label className="text-[9px] text-muted-foreground">Status</label>
+                              <select value={editData.status} onChange={e => setEditData({ ...editData, status: e.target.value })}
+                                className="w-full bg-card border border-border rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:border-primary/50">
+                                <option value="Available">Available</option>
+                                <option value="Matched">Matched</option>
+                                <option value="Allocated">Allocated</option>
+                              </select>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <button onClick={handleSave} className="flex items-center gap-1 px-3 py-1 rounded bg-primary text-primary-foreground text-xs font-semibold"><Check size={12} /> Save</button>
+                            <button onClick={() => { setEditIdx(null); setEditData(null); }} className="flex items-center gap-1 px-3 py-1 rounded bg-secondary border border-border text-xs text-muted-foreground"><X size={12} /> Cancel</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-[10px] text-muted-foreground">
+                          {o.donor_details || "No donor info"} · Blood: {o.blood_type || "N/A"}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Patient List */}
             <div className="stat-card">
               <h2 className="text-xs font-semibold text-foreground mb-3">Patient List</h2>
               <div className="space-y-1 max-h-64 overflow-y-auto">
@@ -139,7 +192,6 @@ const OrganAllocationPage = () => {
             </div>
           </div>
 
-          {/* Right – Selected patient details */}
           <div className="col-span-5">
             {selectedPatient ? (
               <div className="stat-card space-y-3">
@@ -158,43 +210,6 @@ const OrganAllocationPage = () => {
                     <div><span className="text-muted-foreground">Admitted:</span> <span className="text-foreground">{selectedPatient.admissionDate}</span></div>
                     <div><span className="text-muted-foreground">Status:</span> <span className="text-foreground font-semibold">{selectedPatient.riskLevel}</span></div>
                   </div>
-
-                  {selectedPatient.symptoms.length > 0 && (
-                    <div>
-                      <p className="text-[10px] text-muted-foreground mb-1">Symptoms</p>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedPatient.symptoms.map((s, i) => (
-                          <span key={i} className="px-1.5 py-0.5 rounded bg-secondary text-[10px] text-foreground border border-border">{s}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedPatient.testsTaken.length > 0 && (
-                    <div>
-                      <p className="text-[10px] text-muted-foreground mb-1">Tests Taken</p>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedPatient.testsTaken.map(t => (
-                          <span key={t} className="px-1.5 py-0.5 rounded bg-medical-green/10 text-[10px] text-medical-green border border-medical-green/20">{t}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedPatient.medicalHistory.length > 0 && (
-                    <div>
-                      <p className="text-[10px] text-muted-foreground mb-1">Medical History</p>
-                      <div className="space-y-0.5">
-                        {selectedPatient.medicalHistory.map((h, i) => (
-                          <div key={i} className="flex items-center gap-1.5">
-                            <div className="w-1 h-1 rounded-full bg-primary/40" />
-                            <span className="text-[10px] text-foreground">{h}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
                   {selectedPatient.diagnosis && (
                     <div className="p-2 rounded bg-primary/5 border border-primary/20">
                       <p className="text-[9px] text-muted-foreground">Diagnosis</p>
@@ -202,7 +217,6 @@ const OrganAllocationPage = () => {
                     </div>
                   )}
                 </div>
-
                 <div className="pt-2 border-t border-border flex items-center gap-2">
                   <Shield size={10} className="text-muted-foreground" />
                   <span className="text-[9px] text-muted-foreground">THOA Compliance Verified</span>

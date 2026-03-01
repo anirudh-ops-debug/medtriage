@@ -2,18 +2,25 @@ import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Bed, Users, Stethoscope, Syringe, AlertTriangle, Lightbulb, Pencil, Check } from "lucide-react";
 import { useRole } from "@/contexts/RoleContext";
-
-const suggestions = [
-  { text: "Reallocate Cardiologist to ER – cardiac cases rising", urgent: true },
-  { text: "Open 2 Emergency Beds in Ward B", urgent: true },
-  { text: "Shift Nurse Priya to ICU – understaffed", urgent: false },
-  { text: "Predicted ER Overload in 30 Minutes", urgent: true },
-  { text: "Schedule OT-3 for emergency surgery", urgent: false },
-];
+import { usePatients } from "@/contexts/PatientContext";
 
 const ResourcesPage = () => {
   const { role } = useRole();
-  const [erOverload, setErOverload] = useState(76);
+  const { patients } = usePatients();
+
+  const criticalCount = patients.filter(p => p.riskLevel === "Critical").length;
+  const highCount = patients.filter(p => p.riskLevel === "High").length;
+  const totalPatients = patients.length;
+  const erOverload = totalPatients > 0 ? Math.min(100, Math.round(((criticalCount + highCount) / Math.max(totalPatients, 1)) * 100 + 40)) : 0;
+
+  // Generate dynamic suggestions based on real data
+  const suggestions = [];
+  if (criticalCount > 3) suggestions.push({ text: `${criticalCount} critical patients – consider additional ICU staffing`, urgent: true });
+  if (highCount > 5) suggestions.push({ text: `${highCount} high-risk patients need close monitoring`, urgent: true });
+  if (erOverload > 80) suggestions.push({ text: "Predicted ER Overload – consider patient diversion", urgent: true });
+  if (totalPatients > 15) suggestions.push({ text: `${totalPatients} total patients – ensure adequate bed availability`, urgent: false });
+  if (suggestions.length === 0) suggestions.push({ text: "All systems nominal – continue standard operations", urgent: false });
+
   const [resources, setResources] = useState({
     icuUsed: 6, icuTotal: 8,
     generalUsed: 38, generalTotal: 50,
@@ -21,13 +28,6 @@ const ResourcesPage = () => {
     nursesOnDuty: 24, nursesTotal: 32,
     otActive: 3, otTotal: 5,
   });
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setErOverload((prev) => Math.min(100, Math.max(55, prev + Math.round((Math.random() - 0.45) * 3))));
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
 
   const canEditOT = role === "doctor" || role === "admin";
   const canEditICU = role === "nurse" || role === "admin";
@@ -56,12 +56,11 @@ const ResourcesPage = () => {
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          {/* ER Overload */}
           <div className={`stat-card ${erOverload > 80 ? "glow-red-border border-primary/40" : ""}`}>
             <h2 className="text-xs font-semibold text-foreground mb-3">ER Overload Prediction</h2>
             <div className="flex items-end gap-4 mb-3">
               <p className={`text-4xl font-bold ${erOverload > 80 ? "text-primary" : "text-foreground"}`}>{erOverload}%</p>
-              <p className="text-[10px] text-muted-foreground mb-1">current ER load</p>
+              <p className="text-[10px] text-muted-foreground mb-1">current ER load ({criticalCount} critical, {highCount} high)</p>
             </div>
             <div className="h-2 rounded-full bg-secondary mb-3">
               <div className={`h-full rounded-full transition-all duration-700 ${erOverload > 80 ? "bg-primary" : erOverload > 60 ? "bg-medical-yellow" : "bg-medical-green"}`} style={{ width: `${erOverload}%` }} />
@@ -73,7 +72,6 @@ const ResourcesPage = () => {
             )}
           </div>
 
-          {/* AI Suggestions */}
           <div className="stat-card">
             <h2 className="text-xs font-semibold text-foreground mb-3 flex items-center gap-1.5">
               <Lightbulb size={14} className="text-medical-yellow" /> AI Suggestions
