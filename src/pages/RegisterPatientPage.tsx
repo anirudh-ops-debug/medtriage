@@ -3,10 +3,12 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { UserPlus, Barcode, Printer, CheckCircle } from "lucide-react";
 import { usePatients, Patient } from "@/contexts/PatientContext";
 import { useNavigate } from "react-router-dom";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 const RegisterPatientPage = () => {
   const { registerPatient, patients } = usePatients();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
   const [phone, setPhone] = useState("");
@@ -50,52 +52,52 @@ const RegisterPatientPage = () => {
       <div className="animate-fade-up max-w-2xl mx-auto">
         <div className="flex items-center gap-2 mb-6">
           <UserPlus size={18} className="text-primary" />
-          <h1 className="text-lg font-bold text-foreground">Register Patient</h1>
+          <h1 className="text-lg font-bold text-foreground">{t("register.title")}</h1>
         </div>
 
         <div className="stat-card space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1">Full Name *</label>
+              <label className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1">{t("register.fullName")}</label>
               <input
                 value={name}
                 onChange={e => setName(e.target.value)}
                 className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
-                placeholder="Patient name"
+                placeholder={t("register.patientName")}
               />
             </div>
             <div>
-              <label className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1">Phone Number *</label>
+              <label className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1">{t("register.phoneNumber")}</label>
               <input
                 value={phone}
                 onChange={e => setPhone(e.target.value)}
                 className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
-                placeholder="10-digit phone"
+                placeholder={t("register.digitPhone")}
                 maxLength={10}
               />
             </div>
             <div>
-              <label className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1">Age *</label>
+              <label className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1">{t("register.age")}</label>
               <input
                 type="number"
                 value={age}
                 onChange={e => setAge(e.target.value)}
                 className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
-                placeholder="Age"
+                placeholder={t("register.age")}
                 min={0}
                 max={150}
               />
             </div>
             <div>
-              <label className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1">Gender</label>
+              <label className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1">{t("register.gender")}</label>
               <select
                 value={gender}
                 onChange={e => setGender(e.target.value)}
                 className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
               >
-                <option value="M">Male</option>
-                <option value="F">Female</option>
-                <option value="O">Other</option>
+                <option value="M">{t("register.male")}</option>
+                <option value="F">{t("register.female")}</option>
+                <option value="O">{t("register.other")}</option>
               </select>
             </div>
           </div>
@@ -105,7 +107,7 @@ const RegisterPatientPage = () => {
             disabled={!name.trim() || !age || !phone.trim()}
             className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            <UserPlus size={14} /> Register Patient
+            <UserPlus size={14} /> {t("register.registerButton")}
           </button>
         </div>
 
@@ -114,18 +116,17 @@ const RegisterPatientPage = () => {
             <div className="flex items-center gap-2 mb-3">
               <CheckCircle size={14} className="text-medical-green" />
               <span className="text-xs font-semibold text-medical-green">
-                {existingFound ? "Patient Already Registered – Medical History Available" : "Patient Registered Successfully"}
+                {existingFound ? t("register.alreadyRegistered") : t("register.registeredSuccess")}
               </span>
             </div>
 
             <div className="grid grid-cols-2 gap-3 text-xs mb-4">
-              <div><span className="text-muted-foreground">ID:</span> <span className="text-foreground font-semibold">{registered.id}</span></div>
-              <div><span className="text-muted-foreground">Name:</span> <span className="text-foreground font-semibold">{registered.name}</span></div>
-              <div><span className="text-muted-foreground">Age:</span> <span className="text-foreground">{registered.age}</span></div>
-              <div><span className="text-muted-foreground">Phone:</span> <span className="text-foreground">{registered.phone}</span></div>
+              <div><span className="text-muted-foreground">{t("common.id")}:</span> <span className="text-foreground font-semibold">{registered.id}</span></div>
+              <div><span className="text-muted-foreground">{t("common.name")}:</span> <span className="text-foreground font-semibold">{registered.name}</span></div>
+              <div><span className="text-muted-foreground">{t("register.age")}:</span> <span className="text-foreground">{registered.age}</span></div>
+              <div><span className="text-muted-foreground">{t("detail.phone")}:</span> <span className="text-foreground">{registered.phone}</span></div>
             </div>
 
-            {/* Barcode Display */}
             <div className="p-4 bg-secondary rounded-lg border border-border flex flex-col items-center gap-2 mb-4">
               <Barcode size={20} className="text-muted-foreground" />
               <div className="flex gap-[2px]">
@@ -138,7 +139,7 @@ const RegisterPatientPage = () => {
 
             {existingFound && registered.medicalHistory.length > 0 && (
               <div className="mb-4">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Medical History</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">{t("register.medicalHistory")}</p>
                 <div className="flex flex-wrap gap-1.5">
                   {registered.medicalHistory.map((h, i) => (
                     <span key={i} className="px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] border border-primary/20">{h}</span>
@@ -149,10 +150,10 @@ const RegisterPatientPage = () => {
 
             <div className="flex gap-2">
               <button onClick={handlePrint} className="flex-1 py-2 rounded-lg bg-secondary border border-border text-xs text-foreground hover:border-primary/30 transition-all flex items-center justify-center gap-1.5">
-                <Printer size={12} /> Print Barcode
+                <Printer size={12} /> {t("register.printBarcode")}
               </button>
               <button onClick={() => navigate(`/patients/${registered.id}`)} className="flex-1 py-2 rounded-lg bg-primary/10 border border-primary/20 text-xs text-primary hover:bg-primary/20 transition-all flex items-center justify-center gap-1.5">
-                View Profile →
+                {t("register.viewProfile")}
               </button>
             </div>
           </div>

@@ -1,11 +1,12 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { Activity, TrendingDown, Heart, AlertTriangle, Brain, Thermometer } from "lucide-react";
 import { usePatients } from "@/contexts/PatientContext";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 const DeteriorationPage = () => {
   const { patients, loading } = usePatients();
+  const { t } = useLanguage();
 
-  // Only show patients with non-stable risk
   const atRiskPatients = patients
     .filter((p) => p.riskLevel === "Critical" || p.riskLevel === "High" || p.riskLevel === "Moderate")
     .map((p) => {
@@ -20,12 +21,7 @@ const DeteriorationPage = () => {
         "Moderate – Continue Observation";
 
       return {
-        id: p.id,
-        name: p.name,
-        hrTrend,
-        bpTrend,
-        spo2Trend,
-        painEscalation,
+        id: p.id, name: p.name, hrTrend, bpTrend, spo2Trend, painEscalation,
         collapseRisk: p.oxygenDropRisk,
         oxygenWarning: Math.max(0, Math.min(99, (100 - p.vitals.spo2) * 5)),
         cardiacProb: p.cardiacRisk,
@@ -38,7 +34,7 @@ const DeteriorationPage = () => {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <p className="text-sm text-muted-foreground">{t("app.loading")}</p>
         </div>
       </DashboardLayout>
     );
@@ -47,13 +43,13 @@ const DeteriorationPage = () => {
   return (
     <DashboardLayout>
       <div className="animate-fade-up">
-        <h1 className="text-lg font-bold text-foreground mb-1">Deterioration Prediction Engine</h1>
-        <p className="text-xs text-muted-foreground mb-1">Ensuring Early Intervention Before Critical Collapse</p>
-        <p className="text-[10px] text-primary mb-6">AI-powered predictive analytics from live vital trends</p>
+        <h1 className="text-lg font-bold text-foreground mb-1">{t("deterioration.title")}</h1>
+        <p className="text-xs text-muted-foreground mb-1">{t("deterioration.subtitle")}</p>
+        <p className="text-[10px] text-primary mb-6">{t("deterioration.aiPowered")}</p>
 
         {atRiskPatients.length === 0 ? (
           <div className="stat-card flex items-center justify-center h-32">
-            <p className="text-xs text-muted-foreground">No at-risk patients currently</p>
+            <p className="text-xs text-muted-foreground">{t("deterioration.noAtRisk")}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -67,34 +63,34 @@ const DeteriorationPage = () => {
                   {p.collapseRisk > 70 && (
                     <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-primary/15 border border-primary/30 critical-flash">
                       <AlertTriangle size={12} className="text-primary" />
-                      <span className="text-[10px] text-primary font-bold">HIGH ALERT</span>
+                      <span className="text-[10px] text-primary font-bold">{t("deterioration.highAlert")}</span>
                     </div>
                   )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Input Trends</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">{t("deterioration.inputTrends")}</p>
                     <div className="space-y-2">
-                      <TrendRow icon={Heart} label="HR Variability" value={p.hrTrend} />
-                      <TrendRow icon={Activity} label="BP Instability" value={p.bpTrend} />
-                      <TrendRow icon={TrendingDown} label="SpO₂ Trend" value={p.spo2Trend} />
-                      <TrendRow icon={Thermometer} label="Pain Escalation" value={p.painEscalation} />
+                      <TrendRow icon={Heart} label={t("deterioration.hrVariability")} value={p.hrTrend} />
+                      <TrendRow icon={Activity} label={t("deterioration.bpInstability")} value={p.bpTrend} />
+                      <TrendRow icon={TrendingDown} label={t("deterioration.spo2Trend")} value={p.spo2Trend} />
+                      <TrendRow icon={Thermometer} label={t("deterioration.painEscalation")} value={p.painEscalation} />
                     </div>
                   </div>
                   <div>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Predicted Risks</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">{t("deterioration.predictedRisks")}</p>
                     <div className="space-y-3">
-                      <RiskMeter label="Early Collapse Risk" value={p.collapseRisk} />
-                      <RiskMeter label="Oxygen Drop Warning" value={p.oxygenWarning} />
-                      <RiskMeter label="Cardiac Event Probability" value={p.cardiacProb} />
+                      <RiskMeter label={t("deterioration.earlyCollapseRisk")} value={p.collapseRisk} />
+                      <RiskMeter label={t("deterioration.oxygenDropWarning")} value={p.oxygenWarning} />
+                      <RiskMeter label={t("deterioration.cardiacEventProb")} value={p.cardiacProb} />
                     </div>
                   </div>
                 </div>
 
                 <div className="border-t border-border pt-3 flex items-center gap-2">
                   <Brain size={12} className="text-primary" />
-                  <span className="text-[10px] text-muted-foreground">Predicted Severity in 30 min:</span>
+                  <span className="text-[10px] text-muted-foreground">{t("deterioration.predictedSeverity")}</span>
                   <span className={`text-[11px] font-bold ${p.collapseRisk > 60 ? "text-primary" : "text-medical-yellow"}`}>{p.predicted30m}</span>
                 </div>
               </div>

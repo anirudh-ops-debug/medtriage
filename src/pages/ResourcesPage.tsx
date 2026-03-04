@@ -3,21 +3,22 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Bed, Users, Stethoscope, Syringe, AlertTriangle, Lightbulb, Pencil, Check } from "lucide-react";
 import { useRole } from "@/contexts/RoleContext";
 import { usePatients } from "@/contexts/PatientContext";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 const ResourcesPage = () => {
   const { role } = useRole();
   const { patients } = usePatients();
+  const { t } = useLanguage();
 
   const criticalCount = patients.filter(p => p.riskLevel === "Critical").length;
   const highCount = patients.filter(p => p.riskLevel === "High").length;
   const totalPatients = patients.length;
   const erOverload = totalPatients > 0 ? Math.min(100, Math.round(((criticalCount + highCount) / Math.max(totalPatients, 1)) * 100 + 40)) : 0;
 
-  // Generate dynamic suggestions based on real data
-  const suggestions = [];
-  if (criticalCount > 3) suggestions.push({ text: `${criticalCount} critical patients – consider additional ICU staffing`, urgent: true });
-  if (highCount > 5) suggestions.push({ text: `${highCount} high-risk patients need close monitoring`, urgent: true });
-  if (erOverload > 80) suggestions.push({ text: "Predicted ER Overload – consider patient diversion", urgent: true });
+  const suggestions: { text: string; urgent: boolean }[] = [];
+  if (criticalCount > 3) suggestions.push({ text: `${criticalCount} ${t("resources.critical")} patients – consider additional ICU staffing`, urgent: true });
+  if (highCount > 5) suggestions.push({ text: `${highCount} ${t("resources.high")}-risk patients need close monitoring`, urgent: true });
+  if (erOverload > 80) suggestions.push({ text: t("resources.overloadWarning"), urgent: true });
   if (totalPatients > 15) suggestions.push({ text: `${totalPatients} total patients – ensure adequate bed availability`, urgent: false });
   if (suggestions.length === 0) suggestions.push({ text: "All systems nominal – continue standard operations", urgent: false });
 
@@ -35,46 +36,46 @@ const ResourcesPage = () => {
   return (
     <DashboardLayout>
       <div className="animate-fade-up">
-        <h1 className="text-lg font-bold text-foreground mb-1">Hospital Resource Optimization</h1>
-        <p className="text-xs text-muted-foreground mb-4">AI-driven resource allocation · Logged in as <span className="text-primary font-semibold capitalize">{role}</span></p>
+        <h1 className="text-lg font-bold text-foreground mb-1">{t("resources.title")}</h1>
+        <p className="text-xs text-muted-foreground mb-4">{t("resources.subtitle")} · {t("dashboard.loggedInAs")} <span className="text-primary font-semibold capitalize">{role}</span></p>
 
         {(role === "doctor" || role === "nurse") && (
           <div className="mb-4 p-3 rounded-lg bg-primary/5 border border-primary/20 flex items-center gap-2">
             <Pencil size={14} className="text-primary" />
             <span className="text-[11px] text-muted-foreground">
-              {role === "doctor" ? "Click the edit icon on OT cards to update details." : "Click the edit icon on ICU/Nurse cards to update."}
+              {role === "doctor" ? t("resources.editOTNote") : t("resources.editICUNote")}
             </span>
           </div>
         )}
 
         <div className="grid grid-cols-5 gap-3 mb-6">
-          <EditableResourceCard icon={Bed} label="ICU Beds" used={resources.icuUsed} total={resources.icuTotal} editable={canEditICU} onSave={(v) => setResources(p => ({...p, icuUsed: v}))} />
-          <EditableResourceCard icon={Bed} label="General Beds" used={resources.generalUsed} total={resources.generalTotal} />
-          <EditableResourceCard icon={Stethoscope} label="Doctors Active" used={resources.doctorsActive} total={resources.doctorsTotal} />
-          <EditableResourceCard icon={Users} label="Nurses On Duty" used={resources.nursesOnDuty} total={resources.nursesTotal} editable={canEditICU} onSave={(v) => setResources(p => ({...p, nursesOnDuty: v}))} />
-          <EditableResourceCard icon={Syringe} label="OT Active" used={resources.otActive} total={resources.otTotal} editable={canEditOT} onSave={(v) => setResources(p => ({...p, otActive: v}))} />
+          <EditableResourceCard icon={Bed} label={t("resources.icuBeds")} used={resources.icuUsed} total={resources.icuTotal} editable={canEditICU} onSave={(v) => setResources(p => ({...p, icuUsed: v}))} />
+          <EditableResourceCard icon={Bed} label={t("resources.generalBeds")} used={resources.generalUsed} total={resources.generalTotal} />
+          <EditableResourceCard icon={Stethoscope} label={t("resources.doctorsActive")} used={resources.doctorsActive} total={resources.doctorsTotal} />
+          <EditableResourceCard icon={Users} label={t("resources.nursesOnDuty")} used={resources.nursesOnDuty} total={resources.nursesTotal} editable={canEditICU} onSave={(v) => setResources(p => ({...p, nursesOnDuty: v}))} />
+          <EditableResourceCard icon={Syringe} label={t("resources.otActive")} used={resources.otActive} total={resources.otTotal} editable={canEditOT} onSave={(v) => setResources(p => ({...p, otActive: v}))} />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className={`stat-card ${erOverload > 80 ? "glow-red-border border-primary/40" : ""}`}>
-            <h2 className="text-xs font-semibold text-foreground mb-3">ER Overload Prediction</h2>
+            <h2 className="text-xs font-semibold text-foreground mb-3">{t("resources.erOverloadPrediction")}</h2>
             <div className="flex items-end gap-4 mb-3">
               <p className={`text-4xl font-bold ${erOverload > 80 ? "text-primary" : "text-foreground"}`}>{erOverload}%</p>
-              <p className="text-[10px] text-muted-foreground mb-1">current ER load ({criticalCount} critical, {highCount} high)</p>
+              <p className="text-[10px] text-muted-foreground mb-1">{t("resources.currentERLoad")} ({criticalCount} {t("resources.critical")}, {highCount} {t("resources.high")})</p>
             </div>
             <div className="h-2 rounded-full bg-secondary mb-3">
               <div className={`h-full rounded-full transition-all duration-700 ${erOverload > 80 ? "bg-primary" : erOverload > 60 ? "bg-medical-yellow" : "bg-medical-green"}`} style={{ width: `${erOverload}%` }} />
             </div>
             {erOverload > 75 && (
               <p className="text-[10px] text-primary font-semibold flex items-center gap-1">
-                <AlertTriangle size={10} /> Overload warning – consider patient diversion
+                <AlertTriangle size={10} /> {t("resources.overloadWarning")}
               </p>
             )}
           </div>
 
           <div className="stat-card">
             <h2 className="text-xs font-semibold text-foreground mb-3 flex items-center gap-1.5">
-              <Lightbulb size={14} className="text-medical-yellow" /> AI Suggestions
+              <Lightbulb size={14} className="text-medical-yellow" /> {t("resources.aiSuggestions")}
             </h2>
             <div className="space-y-2">
               {suggestions.map((s, i) => (
