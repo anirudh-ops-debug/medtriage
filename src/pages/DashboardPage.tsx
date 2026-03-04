@@ -3,6 +3,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Activity, Bed, Users, Stethoscope, HeartPulse, Syringe, AlertTriangle, Pencil, Check } from "lucide-react";
 import { useRole } from "@/contexts/RoleContext";
 import { usePatients } from "@/contexts/PatientContext";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 const StatCard = ({ label, value, sub, icon: Icon, alert, editable, onSave }: { label: string; value: string | number; sub?: string; icon: any; alert?: boolean; editable?: boolean; onSave?: (val: number) => void }) => {
   const [editing, setEditing] = useState(false);
@@ -75,8 +76,8 @@ const CircularMeter = ({ value, max, label, color }: { value: number; max: numbe
 const DashboardPage = () => {
   const { role } = useRole();
   const { patients, loading } = usePatients();
+  const { t } = useLanguage();
 
-  // Derive stats from real patient data
   const criticalPatients = patients.filter(p => p.riskLevel === "Critical").length;
   const highPatients = patients.filter(p => p.riskLevel === "High").length;
   const totalPatients = patients.length;
@@ -99,68 +100,68 @@ const DashboardPage = () => {
       <div className="animate-fade-up">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-lg font-bold text-foreground">Command Center</h1>
-            <p className="text-xs text-muted-foreground">Real-time hospital overview · Logged in as <span className="text-primary font-semibold capitalize">{role}</span> · {totalPatients} patients</p>
+            <h1 className="text-lg font-bold text-foreground">{t("dashboard.commandCenter")}</h1>
+            <p className="text-xs text-muted-foreground">{t("dashboard.realtimeOverview")} · {t("dashboard.loggedInAs")} <span className="text-primary font-semibold capitalize">{role}</span> · {totalPatients} {t("dashboard.patients")}</p>
           </div>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20">
             <div className="status-dot status-dot-connected" />
-            <span className="text-[10px] text-primary font-medium">All Systems Online</span>
+            <span className="text-[10px] text-primary font-medium">{t("app.allSystemsOnline")}</span>
           </div>
         </div>
 
         <div className="grid grid-cols-4 gap-3 mb-6">
-          <StatCard label="ER Load" value={`${erLoad}%`} sub={`${totalPatients} patients total`} icon={Activity} alert={erLoad > 75} />
+          <StatCard label={t("dashboard.erLoad")} value={`${erLoad}%`} sub={`${totalPatients} ${t("dashboard.patientsTotal")}`} icon={Activity} alert={erLoad > 75} />
           <StatCard
-            label="ICU Beds Free"
+            label={t("dashboard.icuBedsFree")}
             value={resources.icuBeds}
-            sub="of 8 total"
+            sub={`of 8 total`}
             icon={Bed}
             alert={resources.icuBeds < 3}
             editable={canEditICU}
             onSave={(val) => setResources((p) => ({ ...p, icuBeds: Math.max(0, Math.min(8, val)) }))}
           />
-          <StatCard label="General Beds" value={resources.generalBeds} sub="of 50 total" icon={Bed} />
-          <StatCard label="Critical Patients" value={criticalPatients} icon={AlertTriangle} alert={criticalPatients > 0} />
+          <StatCard label={t("dashboard.generalBeds")} value={resources.generalBeds} sub="of 50 total" icon={Bed} />
+          <StatCard label={t("dashboard.criticalPatients")} value={criticalPatients} icon={AlertTriangle} alert={criticalPatients > 0} />
         </div>
 
         <div className="grid grid-cols-4 gap-3 mb-6">
-          <StatCard label="Doctors Available" value={resources.doctors} sub="4 in surgery" icon={Stethoscope} />
+          <StatCard label={t("dashboard.doctorsAvailable")} value={resources.doctors} sub={`4 ${t("dashboard.inSurgery")}`} icon={Stethoscope} />
           <StatCard
-            label="Nurses On Duty"
+            label={t("dashboard.nursesOnDuty")}
             value={resources.nurses}
-            sub="Shift B active"
+            sub={t("dashboard.shiftActive")}
             icon={Users}
             editable={canEditICU}
             onSave={(val) => setResources((p) => ({ ...p, nurses: Math.max(0, val) }))}
           />
           <StatCard
-            label="OT Active"
+            label={t("dashboard.otActive")}
             value={`${resources.otStatus}/5`}
-            sub="2 scheduled"
+            sub={`2 ${t("dashboard.scheduled")}`}
             icon={Syringe}
             editable={canEditOT}
             onSave={(val) => setResources((p) => ({ ...p, otStatus: Math.max(0, Math.min(5, val)) }))}
           />
-          <StatCard label="High Risk" value={highPatients} sub="Need monitoring" icon={HeartPulse} alert={highPatients > 3} />
+          <StatCard label={t("dashboard.highRisk")} value={highPatients} sub={t("dashboard.needMonitoring")} icon={HeartPulse} alert={highPatients > 3} />
         </div>
 
         {(role === "doctor" || role === "nurse") && (
           <div className="mb-4 p-3 rounded-lg bg-primary/5 border border-primary/20 flex items-center gap-2">
             <Pencil size={14} className="text-primary" />
             <span className="text-[11px] text-muted-foreground">
-              {role === "doctor" ? "You can edit OT details directly from this dashboard." : "You can update ICU beds and nurse allocation directly."}
+              {role === "doctor" ? t("dashboard.editOTNote") : t("dashboard.editICUNote")}
             </span>
           </div>
         )}
 
         <div className="stat-card">
-          <h2 className="text-xs font-semibold text-foreground mb-4">Resource Utilization</h2>
+          <h2 className="text-xs font-semibold text-foreground mb-4">{t("dashboard.resourceUtilization")}</h2>
           <div className="flex justify-around">
-            <CircularMeter value={erLoad} max={100} label="ER Load" color="hsl(210 80% 50%)" />
-            <CircularMeter value={8 - resources.icuBeds} max={8} label="ICU Occupancy" color="hsl(352 82% 38%)" />
-            <CircularMeter value={28} max={50} label="General Beds" color="hsl(45 90% 50%)" />
-            <CircularMeter value={resources.otStatus} max={5} label="OT Usage" color="hsl(142 70% 40%)" />
-            <CircularMeter value={resources.doctors} max={20} label="Doctor Load" color="hsl(210 80% 50%)" />
+            <CircularMeter value={erLoad} max={100} label={t("dashboard.erLoadLabel")} color="hsl(210 80% 50%)" />
+            <CircularMeter value={8 - resources.icuBeds} max={8} label={t("dashboard.icuOccupancy")} color="hsl(352 82% 38%)" />
+            <CircularMeter value={28} max={50} label={t("dashboard.generalBedsLabel")} color="hsl(45 90% 50%)" />
+            <CircularMeter value={resources.otStatus} max={5} label={t("dashboard.otUsage")} color="hsl(142 70% 40%)" />
+            <CircularMeter value={resources.doctors} max={20} label={t("dashboard.doctorLoad")} color="hsl(210 80% 50%)" />
           </div>
         </div>
       </div>

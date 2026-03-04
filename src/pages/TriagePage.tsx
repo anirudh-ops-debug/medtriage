@@ -4,6 +4,7 @@ import { Activity, Thermometer, Droplets, Heart, AlertTriangle, Wifi, WifiOff, P
 import { useRole } from "@/contexts/RoleContext";
 import { usePatients, shouldShowLiveVitals, PatientVitals, playPatientClickSound } from "@/contexts/PatientContext";
 import { useNavigate } from "react-router-dom";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 // AI recommendation engine
 const getAIRecommendations = (diagnosis: string, vitals: PatientVitals, riskLevel: string) => {

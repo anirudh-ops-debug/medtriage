@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { usePatients, shouldShowLiveVitals, PatientVitals, playPatientClickSound } from "@/contexts/PatientContext";
 import { useRole } from "@/contexts/RoleContext";
+import { useLanguage } from "@/i18n/LanguageContext";
 import { Heart, Activity, Droplets, Thermometer, Wifi, WifiOff, ArrowLeft, Barcode, Printer, Stethoscope, Brain, AlertTriangle, FileText, Plus, Upload, Download, MonitorSmartphone } from "lucide-react";
 
 // AI recommendation engine

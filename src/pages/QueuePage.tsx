@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { AlertTriangle, Clock, TrendingUp } from "lucide-react";
 import { usePatients } from "@/contexts/PatientContext";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 const riskColors: Record<string, string> = {
   Critical: "text-primary",
@@ -12,8 +13,8 @@ const riskColors: Record<string, string> = {
 
 const QueuePage = () => {
   const { patients, loading } = usePatients();
+  const { t } = useLanguage();
 
-  // Build queue from real patients, sorted by risk severity
   const riskOrder: Record<string, number> = { Critical: 0, High: 1, Moderate: 2, Stable: 3 };
 
   const queue = patients
@@ -34,7 +35,7 @@ const QueuePage = () => {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
-          <p className="text-sm text-muted-foreground">Loading queue...</p>
+          <p className="text-sm text-muted-foreground">{t("queue.loadingQueue")}</p>
         </div>
       </DashboardLayout>
     );
@@ -43,21 +44,21 @@ const QueuePage = () => {
   return (
     <DashboardLayout>
       <div className="animate-fade-up">
-        <h1 className="text-lg font-bold text-foreground mb-1">Auto Queue Priority System</h1>
-        <p className="text-xs text-muted-foreground mb-6">AI-managed live prioritization based on vitals & deterioration risk</p>
+        <h1 className="text-lg font-bold text-foreground mb-1">{t("queue.title")}</h1>
+        <p className="text-xs text-muted-foreground mb-6">{t("queue.subtitle")}</p>
 
         <div className="stat-card overflow-hidden">
           <table className="w-full">
             <thead>
               <tr className="border-b border-border">
-                {["Rank", "Patient", "Risk Level", "Deterioration %", "AI Priority"].map((h) => (
+                {[t("queue.rank"), t("queue.patient"), t("queue.riskLevel"), t("queue.deteriorationPct"), t("queue.aiPriority")].map((h) => (
                   <th key={h} className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider text-left py-3 px-4">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {queue.length === 0 ? (
-                <tr><td colSpan={5} className="text-center py-8 text-xs text-muted-foreground">No patients in queue</td></tr>
+                <tr><td colSpan={5} className="text-center py-8 text-xs text-muted-foreground">{t("queue.noPatients")}</td></tr>
               ) : (
                 queue.map((p, i) => (
                   <tr key={p.id} className={`border-b border-border/50 transition-all duration-500 ${p.riskLevel === "Critical" ? "bg-primary/5 critical-flash" : "hover:bg-secondary/50"}`}>
@@ -81,9 +82,9 @@ const QueuePage = () => {
                     </td>
                     <td className="py-3 px-4">
                       {p.deterioration > 70 ? (
-                        <span className="flex items-center gap-1 text-[10px] text-primary font-bold"><AlertTriangle size={10} /> URGENT</span>
+                        <span className="flex items-center gap-1 text-[10px] text-primary font-bold"><AlertTriangle size={10} /> {t("queue.urgent")}</span>
                       ) : (
-                        <span className="flex items-center gap-1 text-[10px] text-muted-foreground"><TrendingUp size={10} /> Monitored</span>
+                        <span className="flex items-center gap-1 text-[10px] text-muted-foreground"><TrendingUp size={10} /> {t("queue.monitored")}</span>
                       )}
                     </td>
                   </tr>

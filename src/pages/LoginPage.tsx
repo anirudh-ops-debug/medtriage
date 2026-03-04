@@ -2,17 +2,13 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Shield, Cross, Eye, EyeOff, Zap, UserPlus } from "lucide-react";
 import { useAuth, UserRole } from "@/contexts/AuthContext";
-
-const roles = [
-  { id: "admin", label: "Admin", description: "Full system access" },
-  { id: "doctor", label: "Doctor", description: "Patient & triage access" },
-  { id: "nurse", label: "Nurse", description: "Patient monitoring" },
-  { id: "organ_committee", label: "Organ Committee", description: "Transplant management" },
-];
+import { useLanguage } from "@/i18n/LanguageContext";
+import LanguageToggle from "@/components/LanguageToggle";
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const { signIn, signUp } = useAuth();
+  const { t } = useLanguage();
   const [isSignUp, setIsSignUp] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole>("admin");
   const [showPassword, setShowPassword] = useState(false);
@@ -23,13 +19,20 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [signUpSuccess, setSignUpSuccess] = useState(false);
 
+  const roles = [
+    { id: "admin", label: t("roles.admin"), description: t("roles.adminDesc") },
+    { id: "doctor", label: t("roles.doctor"), description: t("roles.doctorDesc") },
+    { id: "nurse", label: t("roles.nurse"), description: t("roles.nurseDesc") },
+    { id: "organ_committee", label: t("roles.organ_committee"), description: t("roles.organCommitteeDesc") },
+  ];
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     if (isSignUp) {
-      if (!fullName.trim()) { setError("Full name is required"); setLoading(false); return; }
+      if (!fullName.trim()) { setError(t("auth.fullNameRequired")); setLoading(false); return; }
       const result = await signUp(email, password, fullName, selectedRole);
       if (result.error) { setError(result.error); } else { setSignUpSuccess(true); }
     } else {
@@ -46,12 +49,12 @@ const LoginPage = () => {
           <div className="w-16 h-16 mx-auto flex items-center justify-center rounded-2xl bg-primary/10 border border-primary/20">
             <Shield className="w-8 h-8 text-primary" />
           </div>
-          <h2 className="text-lg font-bold text-foreground">Check Your Email</h2>
+          <h2 className="text-lg font-bold text-foreground">{t("auth.checkEmail")}</h2>
           <p className="text-sm text-muted-foreground">
-            We've sent a confirmation link to <strong>{email}</strong>. Please verify your email to login.
+            {t("auth.confirmationSent")} <strong>{email}</strong>. {t("auth.verifyEmail")}
           </p>
           <button onClick={() => { setSignUpSuccess(false); setIsSignUp(false); }} className="text-primary text-sm hover:underline">
-            Back to Login
+            {t("auth.backToLogin")}
           </button>
         </div>
       </div>
@@ -60,6 +63,9 @@ const LoginPage = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center relative overflow-hidden">
+      <div className="absolute top-4 right-4 z-20">
+        <LanguageToggle />
+      </div>
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-20"
         style={{ background: "radial-gradient(circle, hsl(352 82% 38% / 0.3) 0%, transparent 70%)" }} />
 
@@ -71,15 +77,14 @@ const LoginPage = () => {
             </div>
           </div>
           <h1 className="text-xl font-bold text-foreground text-center leading-tight">
-            AI-Driven Smart Triage
+            {t("app.tagline")}
           </h1>
           <p className="text-sm text-muted-foreground text-center mt-1">
-            Hospital Intelligence System
+            {t("app.subtitle")}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Role Selection - only for signup */}
           {isSignUp && (
             <div className="grid grid-cols-2 gap-2">
               {roles.map((role) => (
@@ -102,41 +107,38 @@ const LoginPage = () => {
             </div>
           )}
 
-          {/* Full Name - only for signup */}
           {isSignUp && (
             <div>
-              <label className="text-xs text-muted-foreground mb-1.5 block">Full Name</label>
+              <label className="text-xs text-muted-foreground mb-1.5 block">{t("auth.fullName")}</label>
               <input
                 type="text"
                 value={fullName}
                 onChange={e => setFullName(e.target.value)}
-                placeholder="Enter your full name"
+                placeholder={t("auth.enterFullName")}
                 className="w-full bg-secondary border border-border rounded-lg px-3 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
               />
             </div>
           )}
 
-          {/* Email */}
           <div>
-            <label className="text-xs text-muted-foreground mb-1.5 block">Email ID</label>
+            <label className="text-xs text-muted-foreground mb-1.5 block">{t("auth.email")}</label>
             <input
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="Enter your email"
+              placeholder={t("auth.enterEmail")}
               className="w-full bg-secondary border border-border rounded-lg px-3 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
             />
           </div>
 
-          {/* Password */}
           <div>
-            <label className="text-xs text-muted-foreground mb-1.5 block">Password</label>
+            <label className="text-xs text-muted-foreground mb-1.5 block">{t("auth.password")}</label>
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder={isSignUp ? "Create a password (min 6 chars)" : "Enter your password"}
+                placeholder={isSignUp ? t("auth.createPassword") : t("auth.enterPassword")}
                 className="w-full bg-secondary border border-border rounded-lg px-3 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all pr-10"
               />
               <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
@@ -157,9 +159,9 @@ const LoginPage = () => {
             className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg py-2.5 text-sm font-semibold transition-all duration-200 glow-red disabled:opacity-50"
           >
             {isSignUp ? (
-              <><UserPlus className="inline w-4 h-4 mr-2 -mt-0.5" />Create Account</>
+              <><UserPlus className="inline w-4 h-4 mr-2 -mt-0.5" />{t("auth.createAccount")}</>
             ) : (
-              <><Shield className="inline w-4 h-4 mr-2 -mt-0.5" />Secure Login</>
+              <><Shield className="inline w-4 h-4 mr-2 -mt-0.5" />{t("auth.secureLogin")}</>
             )}
           </button>
 
@@ -168,12 +170,12 @@ const LoginPage = () => {
             onClick={() => { setIsSignUp(!isSignUp); setError(""); }}
             className="w-full border border-primary/40 text-primary rounded-lg py-2.5 text-sm font-semibold transition-all duration-200 hover:bg-primary/10"
           >
-            {isSignUp ? "Already have an account? Login" : "New user? Create Account"}
+            {isSignUp ? t("auth.alreadyHaveAccount") : t("auth.newUser")}
           </button>
         </form>
 
         <p className="text-center text-[10px] text-muted-foreground mt-8">
-          Secured with AES-256 Encryption · HIPAA Compliant
+          {t("app.encryption")}
         </p>
       </div>
     </div>

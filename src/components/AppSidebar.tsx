@@ -5,19 +5,20 @@ import {
 } from "lucide-react";
 import { useRole } from "@/contexts/RoleContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/i18n/LanguageContext";
 
-const navItems = [
-  { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { path: "/register", label: "Register Patient", icon: UserPlus },
-  { path: "/patients", label: "Patient List", icon: List },
-  { path: "/triage", label: "AI Triage", icon: Activity },
-  { path: "/queue", label: "Priority Queue", icon: Users },
-  { path: "/deterioration", label: "Deterioration", icon: Cpu },
-  { path: "/resources", label: "Resources", icon: Building2 },
-  { path: "/organs", label: "Organ Allocation", icon: Heart },
-  { path: "/accessibility", label: "Accessibility", icon: Accessibility },
-  { path: "/architecture", label: "Architecture", icon: Settings },
-  { path: "/future", label: "Future Scope", icon: Rocket },
+const navKeys = [
+  { path: "/dashboard", key: "nav.dashboard", icon: LayoutDashboard },
+  { path: "/register", key: "nav.registerPatient", icon: UserPlus },
+  { path: "/patients", key: "nav.patientList", icon: List },
+  { path: "/triage", key: "nav.aiTriage", icon: Activity },
+  { path: "/queue", key: "nav.priorityQueue", icon: Users },
+  { path: "/deterioration", key: "nav.deterioration", icon: Cpu },
+  { path: "/resources", key: "nav.resources", icon: Building2 },
+  { path: "/organs", key: "nav.organAllocation", icon: Heart },
+  { path: "/accessibility", key: "nav.accessibility", icon: Accessibility },
+  { path: "/architecture", key: "nav.architecture", icon: Settings },
+  { path: "/future", key: "nav.futureScope", icon: Rocket },
 ];
 
 const AppSidebar = () => {
@@ -25,23 +26,22 @@ const AppSidebar = () => {
   const navigate = useNavigate();
   const { role } = useRole();
   const { signOut } = useAuth();
+  const { t } = useLanguage();
 
   return (
     <aside className="w-60 h-screen bg-sidebar border-r border-sidebar-border flex flex-col fixed left-0 top-0 z-40">
-      {/* Logo */}
       <div className="p-4 border-b border-sidebar-border flex items-center gap-3">
         <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center glow-red">
           <Cross className="w-4 h-4 text-primary" />
         </div>
         <div>
-          <p className="text-xs font-bold text-foreground leading-tight">MedTriage AI</p>
+          <p className="text-xs font-bold text-foreground leading-tight">{t("app.name")}</p>
           <p className="text-[10px] text-muted-foreground">v2.1 · <span className="capitalize">{role}</span></p>
         </div>
       </div>
 
-      {/* Nav */}
       <nav className="flex-1 py-2 overflow-y-auto">
-        {navItems.map((item) => {
+        {navKeys.map((item) => {
           const isActive = location.pathname === item.path;
           return (
             <NavLink
@@ -54,20 +54,19 @@ const AppSidebar = () => {
               }`}
             >
               <item.icon size={16} />
-              {item.label}
+              {t(item.key)}
             </NavLink>
           );
         })}
       </nav>
 
-      {/* Footer */}
       <div className="p-3 border-t border-sidebar-border">
         <button
           onClick={async () => { await signOut(); navigate("/"); }}
           className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground hover:text-primary transition-colors rounded-lg hover:bg-sidebar-accent w-full"
         >
           <LogOut size={14} />
-          Logout
+          {t("nav.logout")}
         </button>
       </div>
     </aside>
