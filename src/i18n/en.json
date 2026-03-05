@@ -19,7 +19,7 @@
     "deterioration": "Deterioration",
     "resources": "Resources",
     "organAllocation": "Organ Allocation",
-    "accessibility": "Accessibility",
+    
     "architecture": "Architecture",
     "futureScope": "Future Scope",
     "logout": "Logout"
@@ -227,19 +227,6 @@
     "matched": "Matched",
     "allocated": "Allocated"
   },
-  "accessibility": {
-    "title": "Accessibility Features",
-    "subtitle": "Inclusive design for all healthcare environments",
-    "offlineSync": "Offline Mode – Sync Pending",
-    "multilingual": "Multilingual Mode",
-    "multilingualDesc": "English + Hindi + Regional Languages",
-    "voice": "Voice-Based Symptom Entry",
-    "voiceDesc": "Speak symptoms for AI classification",
-    "largeText": "Large Text Mode",
-    "largeTextDesc": "Increase font size across the system",
-    "offline": "Offline Mode",
-    "offlineDesc": "Work without internet – sync when reconnected"
-  },
   "architecture": {
     "title": "System Architecture",
     "subtitle": "End-to-end data flow from IoT to intelligence",
@@ -295,6 +282,7 @@
   },
   "lang": {
     "en": "English",
-    "ta": "தமிழ்"
+    "ta": "தமிழ்",
+    "hi": "हिन्दी"
   }
 }

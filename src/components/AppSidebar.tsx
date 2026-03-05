@@ -1,7 +1,7 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Activity, Users, Building2, Heart, Cpu,
-  Rocket, Settings, LogOut, Cross, Accessibility, UserPlus, List
+  Rocket, Settings, LogOut, Cross, UserPlus, List
 } from "lucide-react";
 import { useRole } from "@/contexts/RoleContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,7 +16,7 @@ const navKeys = [
   { path: "/deterioration", key: "nav.deterioration", icon: Cpu },
   { path: "/resources", key: "nav.resources", icon: Building2 },
   { path: "/organs", key: "nav.organAllocation", icon: Heart },
-  { path: "/accessibility", key: "nav.accessibility", icon: Accessibility },
+  
   { path: "/architecture", key: "nav.architecture", icon: Settings },
   { path: "/future", key: "nav.futureScope", icon: Rocket },
 ];
