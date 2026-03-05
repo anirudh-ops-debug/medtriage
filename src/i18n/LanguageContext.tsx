@@ -14,6 +14,7 @@ interface LanguageContextType {
   t: (key: string) => string;
 }
 
+
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 function getNestedValue(obj: any, path: string): string {
