@@ -1,11 +1,12 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from "react";
 import en from "./en.json";
 import ta from "./ta.json";
+import hi from "./hi.json";
 
-type Language = "en" | "ta";
+type Language = "en" | "ta" | "hi";
 type Translations = typeof en;
 
-const translations: Record<Language, Translations> = { en, ta };
+const translations: Record<Language, Translations> = { en, ta, hi };
 
 interface LanguageContextType {
   language: Language;
@@ -23,7 +24,7 @@ function getNestedValue(obj: any, path: string): string {
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   const [language, setLanguageState] = useState<Language>(() => {
     const stored = localStorage.getItem("medtriage-lang");
-    return (stored === "ta" ? "ta" : "en") as Language;
+    return (stored === "ta" || stored === "hi" ? stored : "en") as Language;
   });
 
   const setLanguage = useCallback((lang: Language) => {

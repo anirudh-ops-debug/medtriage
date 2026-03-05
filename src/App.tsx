@@ -10,7 +10,7 @@ import QueuePage from "./pages/QueuePage";
 import DeteriorationPage from "./pages/DeteriorationPage";
 import ResourcesPage from "./pages/ResourcesPage";
 import OrganAllocationPage from "./pages/OrganAllocationPage";
-import AccessibilityPage from "./pages/AccessibilityPage";
+
 import ArchitecturePage from "./pages/ArchitecturePage";
 import FutureScopePage from "./pages/FutureScopePage";
 import RegisterPatientPage from "./pages/RegisterPatientPage";
@@ -45,7 +45,7 @@ const App = () => (
                   <Route path="/deterioration" element={<P><DeteriorationPage /></P>} />
                   <Route path="/resources" element={<P><ResourcesPage /></P>} />
                   <Route path="/organs" element={<P><OrganAllocationPage /></P>} />
-                  <Route path="/accessibility" element={<P><AccessibilityPage /></P>} />
+                  
                   <Route path="/architecture" element={<P><ArchitecturePage /></P>} />
                   <Route path="/future" element={<P><FutureScopePage /></P>} />
                   <Route path="/register" element={<P><RegisterPatientPage /></P>} />

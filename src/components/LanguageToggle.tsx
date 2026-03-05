@@ -27,6 +27,16 @@ const LanguageToggle = () => {
       >
         தமிழ்
       </button>
+      <button
+        onClick={() => setLanguage("hi")}
+        className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all ${
+          language === "hi"
+            ? "bg-primary text-primary-foreground"
+            : "text-muted-foreground hover:text-foreground"
+        }`}
+      >
+        हिन्दी
+      </button>
     </div>
   );
 };
