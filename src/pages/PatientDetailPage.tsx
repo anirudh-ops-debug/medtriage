@@ -417,15 +417,35 @@ const PatientDetailPage = () => {
               )}
             </div>
             <p className="text-xs text-muted-foreground">{livePatient.id} · {livePatient.age}{livePatient.gender} · Admitted {livePatient.admissionDate}</p>
-            {/* Doctor/Nurse assignment */}
-            <div className="flex items-center gap-3 mt-1">
-              <span className="text-[10px] text-muted-foreground">
-                👨‍⚕️ Doctor: {assignedDoctor || <button onClick={handleAssignDoctor} className="text-primary underline">{canDiagnose ? "Assign me" : "Not assigned"}</button>}
-              </span>
-              <span className="text-[10px] text-muted-foreground">
-                👩‍⚕️ Nurse: {assignedNurse || <button onClick={handleAssignNurse} className="text-primary underline">{canEnterVitals ? "Assign me" : "Not assigned"}</button>}
-              </span>
+            {/* Assigned Doctor & Nurse */}
+            <div className="flex items-center gap-4 mt-1.5">
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-secondary border border-border">
+                <User size={11} className="text-medical-blue" />
+                <span className="text-[10px] font-semibold text-foreground">
+                  {assignedDoctor ? `Dr. ${assignedDoctor}` : (
+                    canDiagnose ? <button onClick={handleAssignDoctor} className="text-primary underline">Assign me</button> : <span className="text-muted-foreground italic">No doctor</span>
+                  )}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-secondary border border-border">
+                <Shield size={11} className="text-medical-green" />
+                <span className="text-[10px] font-semibold text-foreground">
+                  {assignedNurse ? `Nurse ${assignedNurse}` : (
+                    canEnterVitals ? <button onClick={handleAssignNurse} className="text-primary underline">Assign me</button> : <span className="text-muted-foreground italic">No nurse</span>
+                  )}
+                </span>
+              </div>
             </div>
+            {/* Symptoms summary under name */}
+            {livePatient.symptoms.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                <span className="text-[9px] text-muted-foreground font-semibold mr-1">Symptoms:</span>
+                {livePatient.symptoms.slice(0, 5).map((s, i) => (
+                  <span key={i} className="px-1.5 py-0.5 rounded bg-primary/10 text-[9px] text-primary border border-primary/20">{s}</span>
+                ))}
+                {livePatient.symptoms.length > 5 && <span className="text-[9px] text-muted-foreground">+{livePatient.symptoms.length - 5} more</span>}
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {isAdmin && !isDischarged && !isCriticalOrHigh && (
