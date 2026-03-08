@@ -67,13 +67,19 @@ serve(async (req) => {
 
     const results: string[] = [];
 
+    // Fetch all existing users ONCE
+    const { data: existingUsersData } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+    const existingEmails = new Map<string, string>();
+    existingUsersData?.users?.forEach(u => {
+      if (u.email) existingEmails.set(u.email, u.id);
+    });
+
     // Create doctors
     const doctorIds: string[] = [];
     for (const doc of DOCTORS) {
-      const { data: existingUsers } = await supabase.auth.admin.listUsers();
-      const existing = existingUsers?.users?.find(u => u.email === doc.email);
-      if (existing) {
-        doctorIds.push(existing.id);
+      const existingId = existingEmails.get(doc.email);
+      if (existingId) {
+        doctorIds.push(existingId);
         results.push(`Doctor ${doc.name} already exists`);
         continue;
       }
@@ -94,10 +100,9 @@ serve(async (req) => {
     // Create nurses
     const nurseIds: string[] = [];
     for (const nurse of NURSES) {
-      const { data: existingUsers } = await supabase.auth.admin.listUsers();
-      const existing = existingUsers?.users?.find(u => u.email === nurse.email);
-      if (existing) {
-        nurseIds.push(existing.id);
+      const existingId = existingEmails.get(nurse.email);
+      if (existingId) {
+        nurseIds.push(existingId);
         results.push(`Nurse ${nurse.name} already exists`);
         continue;
       }
@@ -115,42 +120,33 @@ serve(async (req) => {
       }
     }
 
-    // Create patients with round-robin doctor/nurse assignment
+    // Update existing patients with symptoms, history, diagnosis, and assignments
     let doctorIdx = 0;
     let nurseIdx = 0;
 
     for (const pt of PATIENTS) {
-      // Check if patient already exists
       const { data: existingPt } = await supabase
         .from("patients")
         .select("id")
-        .eq("phone", pt.phone)
+        .eq("patient_code", pt.code)
         .maybeSingle();
 
+      const assignedDoctor = doctorIds.length > 0 ? doctorIds[doctorIdx % doctorIds.length] : null;
+      const assignedNurse = nurseIds.length > 0 ? nurseIds[nurseIdx % nurseIds.length] : null;
+
       if (existingPt) {
-        // Update existing patient with symptoms and history
-        const { data: existingTriage } = await supabase
-          .from("triage")
-          .select("id")
-          .eq("patient_id", existingPt.id)
-          .maybeSingle();
-
-        if (existingTriage) {
-          await supabase.from("triage").update({
-            symptoms: pt.symptoms,
-            medical_history: pt.history,
-          }).eq("patient_id", existingPt.id);
-        }
-
-        // Update diagnosis and assignments
-        const assignedDoctor = doctorIds.length > 0 ? doctorIds[doctorIdx % doctorIds.length] : null;
-        const assignedNurse = nurseIds.length > 0 ? nurseIds[nurseIdx % nurseIds.length] : null;
-        
+        // Update patient
         await supabase.from("patients").update({
           diagnosis: pt.diagnosis,
           assigned_doctor_id: assignedDoctor,
           assigned_nurse_id: assignedNurse,
         }).eq("id", existingPt.id);
+
+        // Update triage
+        await supabase.from("triage").update({
+          symptoms: pt.symptoms,
+          medical_history: pt.history,
+        }).eq("patient_id", existingPt.id);
 
         doctorIdx++;
         nurseIdx++;
@@ -158,11 +154,8 @@ serve(async (req) => {
         continue;
       }
 
+      // Create new patient
       const barcode = `BC-${(10000001 + PATIENTS.indexOf(pt)).toString().padStart(8, '0')}`;
-      const assignedDoctor = doctorIds.length > 0 ? doctorIds[doctorIdx % doctorIds.length] : null;
-      const assignedNurse = nurseIds.length > 0 ? nurseIds[nurseIdx % nurseIds.length] : null;
-
-      // Use first doctor as creator
       const createdBy = doctorIds.length > 0 ? doctorIds[0] : null;
 
       const { data: newPt, error: ptErr } = await supabase.from("patients").insert({
@@ -183,36 +176,27 @@ serve(async (req) => {
         continue;
       }
 
-      // Create triage with symptoms and medical history
       await supabase.from("triage").insert({
         patient_id: newPt.id,
         symptoms: pt.symptoms,
         medical_history: pt.history,
       });
 
-      // Create initial vitals
       await supabase.from("vitals").insert({
         patient_id: newPt.id,
         recorded_by: createdBy,
       });
 
-      // Create timeline entry
-      await supabase.from("patient_timeline").insert({
-        patient_id: newPt.id,
-        event_description: "Patient registered from CSV data",
-        event_type: "registration",
-        created_by: createdBy,
-      });
-
       doctorIdx++;
       nurseIdx++;
-      results.push(`Created patient ${pt.name} → Dr. ${DOCTORS[doctorIds.indexOf(assignedDoctor!)  % DOCTORS.length]?.name || "?"} / Nurse ${NURSES[nurseIds.indexOf(assignedNurse!) % NURSES.length]?.name || "?"}`);
+      results.push(`Created patient ${pt.name}`);
     }
 
     return new Response(JSON.stringify({ success: true, results }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
+    console.error("Seed error:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
