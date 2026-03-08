@@ -121,45 +121,92 @@ export type Database = {
           },
         ]
       }
+      patient_timeline: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          event_description: string
+          event_type: string
+          id: string
+          patient_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          event_description: string
+          event_type?: string
+          id?: string
+          patient_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          event_description?: string
+          event_type?: string
+          id?: string
+          patient_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_timeline_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patients: {
         Row: {
           admission_date: string
           age: number
+          assigned_doctor_id: string | null
+          assigned_nurse_id: string | null
           barcode: string
           created_at: string
           created_by: string | null
           diagnosis: string | null
+          discharge_date: string | null
           gender: string
           id: string
           name: string
           patient_code: string
           phone: string
+          status: string
         }
         Insert: {
           admission_date?: string
           age: number
+          assigned_doctor_id?: string | null
+          assigned_nurse_id?: string | null
           barcode: string
           created_at?: string
           created_by?: string | null
           diagnosis?: string | null
+          discharge_date?: string | null
           gender: string
           id?: string
           name: string
           patient_code: string
           phone: string
+          status?: string
         }
         Update: {
           admission_date?: string
           age?: number
+          assigned_doctor_id?: string | null
+          assigned_nurse_id?: string | null
           barcode?: string
           created_at?: string
           created_by?: string | null
           diagnosis?: string | null
+          discharge_date?: string | null
           gender?: string
           id?: string
           name?: string
           patient_code?: string
           phone?: string
+          status?: string
         }
         Relationships: []
       }
