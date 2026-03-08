@@ -13,7 +13,7 @@ import OrganAllocationPage from "./pages/OrganAllocationPage";
 
 import ArchitecturePage from "./pages/ArchitecturePage";
 import MediBotPage from "./pages/MediBotPage";
-
+import SeedDataPage from "./pages/SeedDataPage";
 import RegisterPatientPage from "./pages/RegisterPatientPage";
 import PatientListPage from "./pages/PatientListPage";
 import PatientDetailPage from "./pages/PatientDetailPage";
@@ -50,6 +50,7 @@ const App = () => (
                   
                   <Route path="/architecture" element={<P><ArchitecturePage /></P>} />
                   <Route path="/medibot" element={<P><MediBotPage /></P>} />
+                  <Route path="/seed" element={<P><SeedDataPage /></P>} />
                   
                   <Route path="/register" element={<P><RegisterPatientPage /></P>} />
                   <Route path="/patients" element={<P><PatientListPage /></P>} />

@@ -1,9 +1,11 @@
 import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { UserPlus, Barcode, Printer, CheckCircle, AlertTriangle, X } from "lucide-react";
+import { UserPlus, Printer, CheckCircle, AlertTriangle, X } from "lucide-react";
 import { usePatients, Patient } from "@/contexts/PatientContext";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { supabase } from "@/integrations/supabase/client";
+import Barcode from "react-barcode";
 
 const EMERGENCY_SYMPTOMS = ["chest pain", "breathing difficulty", "stroke signs", "heavy bleeding"];
 
@@ -107,6 +109,19 @@ const RegisterPatientPage = () => {
     }
     const patient = await registerPatient(name.trim(), parseInt(age), phone.trim(), gender);
     if (patient) {
+      // Save symptoms to triage if any
+      if (symptoms.length > 0) {
+        await supabase.from("triage").update({ symptoms }).eq("patient_id", patient.dbId);
+      }
+      // Save triage followup answers as additional info in timeline
+      if (Object.keys(triageAnswers).length > 0) {
+        const desc = Object.entries(triageAnswers).map(([s, answers]) => {
+          const key = Object.keys(TRIAGE_FOLLOWUPS).find(k => s.includes(k));
+          const qs = key ? TRIAGE_FOLLOWUPS[key] : [];
+          return `${s}: ${qs.map((q, i) => answers[i] ? `${q} ${answers[i]}` : "").filter(Boolean).join("; ")}`;
+        }).join(" | ");
+        await supabase.from("patient_timeline").insert({ patient_id: patient.dbId, event_description: `Triage responses: ${desc}`, event_type: "triage" });
+      }
       setRegistered(patient);
       setExistingFound(false);
     }
@@ -114,15 +129,22 @@ const RegisterPatientPage = () => {
 
   const handlePrint = () => {
     if (!registered) return;
-    const w = window.open("", "_blank", "width=400,height=300");
+    const w = window.open("", "_blank", "width=500,height=400");
     if (!w) return;
+    const url = `${window.location.origin}/patients/${registered.id}`;
     w.document.write(`
       <html><body style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:monospace;">
         <h2>${registered.name}</h2>
         <p>ID: ${registered.id}</p>
-        <p style="font-size:24px;letter-spacing:4px;font-weight:bold;margin-top:8px">${registered.barcode}</p>
+        <div id="bc"></div>
         <p>Age: ${registered.age} | Phone: ${registered.phone}</p>
-        <script>window.print();<\/script>
+        <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
+        <script>
+          var svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+          document.getElementById("bc").appendChild(svg);
+          JsBarcode(svg,"${url}",{width:1.5,height:60,fontSize:10,displayValue:true});
+          setTimeout(function(){window.print()},500);
+        <\/script>
       </body></html>
     `);
   };
@@ -267,12 +289,7 @@ const RegisterPatientPage = () => {
               <div><span className="text-muted-foreground">{t("detail.phone")}:</span> <span className="text-foreground">{registered.phone}</span></div>
             </div>
             <div className="p-4 bg-secondary rounded-lg border border-border flex flex-col items-center gap-2 mb-4">
-              <Barcode size={20} className="text-muted-foreground" />
-              <div className="flex gap-[2px]">
-                {registered.barcode.split("").map((c, i) => (
-                  <div key={i} className="bg-foreground" style={{ width: parseInt(c) % 2 === 0 ? 2 : 3, height: 40 }} />
-                ))}
-              </div>
+              <Barcode value={`${window.location.origin}/patients/${registered.id}`} width={1.5} height={50} fontSize={10} background="transparent" lineColor="hsl(0 0% 70%)" displayValue={false} />
               <p className="text-xs font-mono text-muted-foreground tracking-[4px]">{registered.barcode}</p>
             </div>
             {existingFound && registered.medicalHistory.length > 0 && (
