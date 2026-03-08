@@ -24,7 +24,7 @@ const TRIAGE_FOLLOWUPS: Record<string, string[]> = {
 };
 
 const RegisterPatientPage = () => {
-  const { registerPatient, patients } = usePatients();
+  const { registerPatient, patients, refreshPatients } = usePatients();
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [name, setName] = useState("");
