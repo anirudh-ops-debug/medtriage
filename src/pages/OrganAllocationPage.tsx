@@ -81,31 +81,41 @@ const OrganAllocationPage = () => {
     Allocated: "bg-primary/10 text-primary border-primary/30",
   };
 
-  // Generate possible matches: patients needing organs matched to available donors
+  // Organ recipients from CSV data (patients needing organs)
+  const ORGAN_RECIPIENTS = [
+    { patient_name: "Ravi Kumar", organ_needed: "Kidney", blood_type: "O+", priority: "High" },
+    { patient_name: "Anita Sharma", organ_needed: "Liver", blood_type: "A+", priority: "Medium" },
+    { patient_name: "Arjun Mehta", organ_needed: "Heart", blood_type: "B+", priority: "High" },
+    { patient_name: "Sneha Iyer", organ_needed: "Kidney", blood_type: "AB+", priority: "Low" },
+    { patient_name: "Rahul Das", organ_needed: "Liver", blood_type: "O-", priority: "High" },
+  ];
+
+  // Generate possible matches: recipients matched to available donors by organ + blood compatibility
   const possibleMatches = useMemo(() => {
     const matches: { patientName: string; donorName: string; organ: string; patientBlood: string; donorBlood: string; priority: string }[] = [];
     
-    // Match organs to patients based on organ name and blood compatibility
-    organs.forEach(organ => {
-      if (organ.status !== "Available" || !organ.blood_type || !organ.donor_details) return;
-      
-      patients.forEach(patient => {
-        // Check blood compatibility
-        if (isBloodCompatible(organ.blood_type, organ.blood_type)) {
+    ORGAN_RECIPIENTS.forEach(recipient => {
+      organs.forEach(organ => {
+        if (organ.status !== "Available" || !organ.blood_type || !organ.donor_details) return;
+        // Match by same organ type AND blood compatibility
+        if (
+          organ.organ_name.toLowerCase() === recipient.organ_needed.toLowerCase() &&
+          isBloodCompatible(organ.blood_type, recipient.blood_type)
+        ) {
           matches.push({
-            patientName: patient.name,
+            patientName: recipient.patient_name,
             donorName: organ.donor_details,
             organ: organ.organ_name,
-            patientBlood: patient.gender, // Using available data
+            patientBlood: recipient.blood_type,
             donorBlood: organ.blood_type,
-            priority: patient.riskLevel,
+            priority: recipient.priority,
           });
         }
       });
     });
     
-    return matches.slice(0, 10); // Limit display
-  }, [organs, patients]);
+    return matches;
+  }, [organs]);
 
   return (
     <DashboardLayout>
