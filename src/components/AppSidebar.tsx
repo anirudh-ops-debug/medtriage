@@ -18,7 +18,7 @@ const navKeys = [
   { path: "/organs", key: "nav.organAllocation", icon: Heart },
   
   { path: "/architecture", key: "nav.architecture", icon: Settings },
-  { path: "/future", key: "nav.futureScope", icon: Rocket },
+  
 ];
 
 const AppSidebar = () => {
