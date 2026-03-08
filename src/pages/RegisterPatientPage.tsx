@@ -129,15 +129,22 @@ const RegisterPatientPage = () => {
 
   const handlePrint = () => {
     if (!registered) return;
-    const w = window.open("", "_blank", "width=400,height=300");
+    const w = window.open("", "_blank", "width=500,height=400");
     if (!w) return;
+    const url = `${window.location.origin}/patients/${registered.id}`;
     w.document.write(`
       <html><body style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:monospace;">
         <h2>${registered.name}</h2>
         <p>ID: ${registered.id}</p>
-        <p style="font-size:24px;letter-spacing:4px;font-weight:bold;margin-top:8px">${registered.barcode}</p>
+        <div id="bc"></div>
         <p>Age: ${registered.age} | Phone: ${registered.phone}</p>
-        <script>window.print();<\/script>
+        <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
+        <script>
+          var svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+          document.getElementById("bc").appendChild(svg);
+          JsBarcode(svg,"${url}",{width:1.5,height:60,fontSize:10,displayValue:true});
+          setTimeout(function(){window.print()},500);
+        <\/script>
       </body></html>
     `);
   };
