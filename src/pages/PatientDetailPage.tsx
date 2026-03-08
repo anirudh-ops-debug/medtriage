@@ -447,7 +447,7 @@ const PatientDetailPage = () => {
                 <script>
                   var svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
                   document.getElementById("bc").appendChild(svg);
-                  JsBarcode(svg,"${window.location.origin}/patients/${livePatient.id}",{width:1.5,height:60,fontSize:10,displayValue:true});
+                  JsBarcode(svg,"${livePatient.barcode}",{width:1.5,height:50,fontSize:12,displayValue:true});
                   setTimeout(function(){window.print()},500);
                 <\/script></body></html>`);
             }} className="p-1.5 rounded-lg bg-secondary border border-border hover:border-primary/30 transition-all" title="Print Barcode">
