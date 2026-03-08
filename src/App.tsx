@@ -12,6 +12,7 @@ import ResourcesPage from "./pages/ResourcesPage";
 import OrganAllocationPage from "./pages/OrganAllocationPage";
 
 import ArchitecturePage from "./pages/ArchitecturePage";
+import MediBotPage from "./pages/MediBotPage";
 
 import RegisterPatientPage from "./pages/RegisterPatientPage";
 import PatientListPage from "./pages/PatientListPage";
