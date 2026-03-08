@@ -18,7 +18,7 @@ const navKeys = [
   { path: "/organs", key: "nav.organAllocation", icon: Heart },
   { path: "/medibot", key: "nav.medibot", icon: Bot },
   { path: "/architecture", key: "nav.architecture", icon: Settings },
-
+  { path: "/seed", key: "nav.seedData", icon: Database },
 ];
 
 const AppSidebar = () => {
