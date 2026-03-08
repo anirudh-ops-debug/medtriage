@@ -7,7 +7,8 @@ import { useLanguage } from "@/i18n/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Heart, Activity, Droplets, Thermometer, Wifi, WifiOff, ArrowLeft, Barcode, Printer, Stethoscope, Brain, AlertTriangle, FileText, Plus, Upload, Download, MonitorSmartphone, Pencil, Check, X, LogOut, Clock, User, Shield, TrendingUp } from "lucide-react";
+import { Heart, Activity, Droplets, Thermometer, Wifi, WifiOff, ArrowLeft, Printer, Stethoscope, Brain, AlertTriangle, FileText, Plus, Upload, Download, MonitorSmartphone, Pencil, Check, X, LogOut, Clock, User, Shield, TrendingUp } from "lucide-react";
+import Barcode from "react-barcode";
 
 // ─── AI Recommendation Engine ─────────────────────────────────────
 const getAIRecommendations = (diagnosis: string, vitals: PatientVitals, riskLevel: string) => {
