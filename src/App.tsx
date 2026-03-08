@@ -12,7 +12,7 @@ import ResourcesPage from "./pages/ResourcesPage";
 import OrganAllocationPage from "./pages/OrganAllocationPage";
 
 import ArchitecturePage from "./pages/ArchitecturePage";
-import FutureScopePage from "./pages/FutureScopePage";
+
 import RegisterPatientPage from "./pages/RegisterPatientPage";
 import PatientListPage from "./pages/PatientListPage";
 import PatientDetailPage from "./pages/PatientDetailPage";
@@ -47,7 +47,7 @@ const App = () => (
                   <Route path="/organs" element={<P><OrganAllocationPage /></P>} />
                   
                   <Route path="/architecture" element={<P><ArchitecturePage /></P>} />
-                  <Route path="/future" element={<P><FutureScopePage /></P>} />
+                  
                   <Route path="/register" element={<P><RegisterPatientPage /></P>} />
                   <Route path="/patients" element={<P><PatientListPage /></P>} />
                   <Route path="/patients/:id" element={<P><PatientDetailPage /></P>} />

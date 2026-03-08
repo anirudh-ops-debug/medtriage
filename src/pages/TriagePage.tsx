@@ -339,6 +339,12 @@ const TriagePage = () => {
                 <p className="text-[8px] text-muted-foreground mt-3 italic">⚕️ AI-generated – clinical judgment supersedes</p>
               </div>
             )}
+
+            {/* Medical Disclaimer */}
+            <div className="stat-card">
+              <p className="text-[10px] font-semibold text-muted-foreground">⚕️ Medical Disclaimer</p>
+              <p className="text-[9px] text-muted-foreground leading-relaxed mt-1">This system provides informational triage guidance only. It is not a substitute for professional medical advice.</p>
+            </div>
           </div>
         </div>
       </div>
