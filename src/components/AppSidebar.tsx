@@ -1,7 +1,7 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Activity, Users, Building2, Heart, Cpu,
-  Rocket, Settings, LogOut, Cross, UserPlus, List
+  Settings, LogOut, Cross, UserPlus, List
 } from "lucide-react";
 import { useRole } from "@/contexts/RoleContext";
 import { useAuth } from "@/contexts/AuthContext";
