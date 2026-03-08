@@ -310,6 +310,36 @@ export const PatientProvider = ({ children }: { children: ReactNode }) => {
       return found || null;
     }
 
+    // Auto-assign doctor and nurse using load balancing
+    let assignedDoctorId: string | null = null;
+    let assignedNurseId: string | null = null;
+    try {
+      // Get all doctors and nurses
+      const { data: allRoles } = await supabase.from("user_roles").select("user_id, role");
+      const doctorIds = (allRoles || []).filter(r => r.role === "doctor").map(r => r.user_id);
+      const nurseIds = (allRoles || []).filter(r => r.role === "nurse").map(r => r.user_id);
+
+      if (doctorIds.length > 0) {
+        // Count current patient assignments per doctor
+        const { data: allPatients } = await supabase.from("patients").select("assigned_doctor_id, assigned_nurse_id");
+        const doctorCounts: Record<string, number> = {};
+        const nurseCounts: Record<string, number> = {};
+        doctorIds.forEach(id => { doctorCounts[id] = 0; });
+        nurseIds.forEach(id => { nurseCounts[id] = 0; });
+        (allPatients || []).forEach(p => {
+          if (p.assigned_doctor_id && doctorCounts[p.assigned_doctor_id] !== undefined) doctorCounts[p.assigned_doctor_id]++;
+          if (p.assigned_nurse_id && nurseCounts[p.assigned_nurse_id] !== undefined) nurseCounts[p.assigned_nurse_id]++;
+        });
+
+        // Pick doctor with lowest count
+        assignedDoctorId = doctorIds.reduce((min, id) => (doctorCounts[id] < doctorCounts[min] ? id : min), doctorIds[0]);
+        // Pick nurse with lowest count
+        if (nurseIds.length > 0) {
+          assignedNurseId = nurseIds.reduce((min, id) => (nurseCounts[id] < nurseCounts[min] ? id : min), nurseIds[0]);
+        }
+      }
+    } catch {}
+
     const barcode = "MED" + Math.floor(Math.random() * 10000000000).toString().padStart(10, "0");
     const patientCode = "PT-" + Math.floor(Math.random() * 900 + 100).toString();
 
@@ -317,6 +347,8 @@ export const PatientProvider = ({ children }: { children: ReactNode }) => {
       patient_code: patientCode,
       name, age, gender, phone, barcode,
       created_by: user.id,
+      assigned_doctor_id: assignedDoctorId,
+      assigned_nurse_id: assignedNurseId,
     }).select().single();
 
     if (error || !newPatient) return null;
