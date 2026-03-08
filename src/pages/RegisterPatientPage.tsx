@@ -282,12 +282,7 @@ const RegisterPatientPage = () => {
               <div><span className="text-muted-foreground">{t("detail.phone")}:</span> <span className="text-foreground">{registered.phone}</span></div>
             </div>
             <div className="p-4 bg-secondary rounded-lg border border-border flex flex-col items-center gap-2 mb-4">
-              <Barcode size={20} className="text-muted-foreground" />
-              <div className="flex gap-[2px]">
-                {registered.barcode.split("").map((c, i) => (
-                  <div key={i} className="bg-foreground" style={{ width: parseInt(c) % 2 === 0 ? 2 : 3, height: 40 }} />
-                ))}
-              </div>
+              <Barcode value={`${window.location.origin}/patients/${registered.id}`} width={1.5} height={50} fontSize={10} background="transparent" lineColor="hsl(0 0% 70%)" displayValue={false} />
               <p className="text-xs font-mono text-muted-foreground tracking-[4px]">{registered.barcode}</p>
             </div>
             {existingFound && registered.medicalHistory.length > 0 && (
