@@ -109,6 +109,19 @@ const RegisterPatientPage = () => {
     }
     const patient = await registerPatient(name.trim(), parseInt(age), phone.trim(), gender);
     if (patient) {
+      // Save symptoms to triage if any
+      if (symptoms.length > 0) {
+        await supabase.from("triage").update({ symptoms }).eq("patient_id", patient.dbId);
+      }
+      // Save triage followup answers as additional info in timeline
+      if (Object.keys(triageAnswers).length > 0) {
+        const desc = Object.entries(triageAnswers).map(([s, answers]) => {
+          const key = Object.keys(TRIAGE_FOLLOWUPS).find(k => s.includes(k));
+          const qs = key ? TRIAGE_FOLLOWUPS[key] : [];
+          return `${s}: ${qs.map((q, i) => answers[i] ? `${q} ${answers[i]}` : "").filter(Boolean).join("; ")}`;
+        }).join(" | ");
+        await supabase.from("patient_timeline").insert({ patient_id: patient.dbId, event_description: `Triage responses: ${desc}`, event_type: "triage" });
+      }
       setRegistered(patient);
       setExistingFound(false);
     }
