@@ -1,6 +1,6 @@
 import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { UserPlus, Barcode, Printer, CheckCircle, AlertTriangle } from "lucide-react";
+import { UserPlus, Barcode, Printer, CheckCircle, AlertTriangle, X } from "lucide-react";
 import { usePatients, Patient } from "@/contexts/PatientContext";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/i18n/LanguageContext";
@@ -9,13 +9,16 @@ const EMERGENCY_SYMPTOMS = ["chest pain", "breathing difficulty", "stroke signs"
 
 const TRIAGE_FOLLOWUPS: Record<string, string[]> = {
   headache: ["How long have you had the headache?", "Any vomiting?", "Do you have fever?", "Vision problems?", "Neck stiffness?"],
-  "chest pain": ["When did the pain start?", "Does it radiate to the arm or jaw?", "Shortness of breath?", "Sweating or nausea?"],
+  "chest pain": ["Pain severity (1-10)?", "Does it radiate to the arm or jaw?", "Difficulty breathing?", "Duration?", "Sweating or nausea?"],
   fever: ["How high is the temperature?", "How many days?", "Any chills or rigors?", "Any rash?"],
   "breathing difficulty": ["Sudden or gradual onset?", "Any wheezing?", "Chest tightness?", "History of asthma or COPD?"],
   cough: ["Dry or productive cough?", "Any blood in sputum?", "Duration?", "Associated fever?"],
   "abdominal pain": ["Location of pain?", "Any vomiting or diarrhea?", "Blood in stool?", "Last meal?"],
   dizziness: ["Any fainting episodes?", "Associated with movement?", "Hearing changes?", "Blurred vision?"],
   "heavy bleeding": ["Location of bleeding?", "How long has it been bleeding?", "Any trauma?", "On blood thinners?"],
+  "stroke signs": ["Which side is affected?", "Speech difficulty?", "When did symptoms start?", "Any headache?"],
+  vomiting: ["How many times?", "Blood in vomit?", "Associated pain?", "Recent food intake?"],
+  "back pain": ["Upper or lower back?", "Radiating to legs?", "Any numbness?", "Duration?"],
 };
 
 const RegisterPatientPage = () => {
@@ -30,7 +33,6 @@ const RegisterPatientPage = () => {
   const [existingFound, setExistingFound] = useState(false);
   const [phoneError, setPhoneError] = useState("");
 
-  // Triage symptom flow
   const [symptomInput, setSymptomInput] = useState("");
   const [symptoms, setSymptoms] = useState<string[]>([]);
   const [triageAnswers, setTriageAnswers] = useState<Record<string, string[]>>({});
@@ -52,15 +54,29 @@ const RegisterPatientPage = () => {
     setSymptoms(prev => [...prev, s]);
     setSymptomInput("");
 
-    // Check emergency
     if (EMERGENCY_SYMPTOMS.some(e => s.includes(e))) {
       setEmergencyAlert(true);
     }
 
-    // Check for follow-up questions
     const key = Object.keys(TRIAGE_FOLLOWUPS).find(k => s.includes(k));
     if (key) {
       setCurrentFollowups({ symptom: s, questions: TRIAGE_FOLLOWUPS[key], answers: new Array(TRIAGE_FOLLOWUPS[key].length).fill("") });
+    }
+  };
+
+  const handleRemoveSymptom = (idx: number) => {
+    const removed = symptoms[idx];
+    setSymptoms(prev => prev.filter((_, i) => i !== idx));
+    // Remove triage answers for this symptom
+    setTriageAnswers(prev => {
+      const next = { ...prev };
+      delete next[removed];
+      return next;
+    });
+    // Check if emergency still applies
+    const remaining = symptoms.filter((_, i) => i !== idx);
+    if (!remaining.some(s => EMERGENCY_SYMPTOMS.some(e => s.includes(e)))) {
+      setEmergencyAlert(false);
     }
   };
 
@@ -104,7 +120,6 @@ const RegisterPatientPage = () => {
       <html><body style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:monospace;">
         <h2>${registered.name}</h2>
         <p>ID: ${registered.id}</p>
-        <svg id="bc"></svg>
         <p style="font-size:24px;letter-spacing:4px;font-weight:bold;margin-top:8px">${registered.barcode}</p>
         <p>Age: ${registered.age} | Phone: ${registered.phone}</p>
         <script>window.print();<\/script>
@@ -124,47 +139,29 @@ const RegisterPatientPage = () => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1">{t("register.fullName")}</label>
-              <input
-                value={name}
-                onChange={e => setName(e.target.value)}
+              <input value={name} onChange={e => setName(e.target.value)}
                 className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
-                placeholder={t("register.patientName")}
-              />
+                placeholder={t("register.patientName")} />
             </div>
             <div>
               <label className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1">{t("register.phoneNumber")}</label>
-              <input
-                value={phone}
-                onChange={e => validatePhone(e.target.value)}
+              <input value={phone} onChange={e => validatePhone(e.target.value)}
                 className={`w-full bg-secondary border rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 transition-all ${phoneError ? "border-primary focus:border-primary focus:ring-primary/30" : "border-border focus:border-primary/50 focus:ring-primary/30"}`}
-                placeholder={t("register.digitPhone")}
-                maxLength={10}
-              />
+                placeholder={t("register.digitPhone")} maxLength={10} />
               {phoneError && (
-                <p className="text-[10px] text-primary mt-1 flex items-center gap-1">
-                  <AlertTriangle size={10} /> {phoneError}
-                </p>
+                <p className="text-[10px] text-primary mt-1 flex items-center gap-1"><AlertTriangle size={10} /> {phoneError}</p>
               )}
             </div>
             <div>
               <label className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1">{t("register.age")}</label>
-              <input
-                type="number"
-                value={age}
-                onChange={e => setAge(e.target.value)}
+              <input type="number" value={age} onChange={e => setAge(e.target.value)}
                 className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
-                placeholder={t("register.age")}
-                min={0}
-                max={150}
-              />
+                placeholder={t("register.age")} min={0} max={150} />
             </div>
             <div>
               <label className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1">{t("register.gender")}</label>
-              <select
-                value={gender}
-                onChange={e => setGender(e.target.value)}
-                className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
-              >
+              <select value={gender} onChange={e => setGender(e.target.value)}
+                className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all">
                 <option value="M">{t("register.male")}</option>
                 <option value="F">{t("register.female")}</option>
                 <option value="O">{t("register.other")}</option>
@@ -172,23 +169,23 @@ const RegisterPatientPage = () => {
             </div>
           </div>
 
-          {/* Symptom Input with Triage Flow */}
+          {/* Symptom Input */}
           <div>
             <label className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1">Symptoms</label>
             <div className="flex gap-2">
-              <input
-                value={symptomInput}
-                onChange={e => setSymptomInput(e.target.value)}
+              <input value={symptomInput} onChange={e => setSymptomInput(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleAddSymptom()}
                 className="flex-1 bg-secondary border border-border rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
-                placeholder="Enter symptom (e.g., Headache, Chest pain...)"
-              />
+                placeholder="Enter symptom (e.g., Headache, Chest pain...)" />
               <button onClick={handleAddSymptom} className="px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold">Add</button>
             </div>
             {symptoms.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {symptoms.map((s, i) => (
-                  <span key={i} className="px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] border border-primary/20">{s}</span>
+                  <span key={i} className="px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] border border-primary/20 flex items-center gap-1">
+                    {s}
+                    <button onClick={() => handleRemoveSymptom(i)} className="hover:text-foreground"><X size={8} /></button>
+                  </span>
                 ))}
               </div>
             )}
@@ -200,8 +197,9 @@ const RegisterPatientPage = () => {
               <div className="flex items-center gap-2">
                 <AlertTriangle size={18} className="text-primary" />
                 <div>
-                  <p className="text-sm font-bold text-primary">🚨 CALL EMERGENCY SERVICES</p>
-                  <p className="text-[10px] text-primary/80">Critical symptom detected. Immediate medical attention required.</p>
+                  <p className="text-sm font-bold text-primary">⚠️ EMERGENCY WARNING</p>
+                  <p className="text-xs font-semibold text-primary">CALL EMERGENCY SERVICES IMMEDIATELY</p>
+                  <p className="text-[10px] text-primary/80 mt-1">Critical symptom detected. Immediate medical attention required.</p>
                 </div>
               </div>
             </div>
@@ -214,12 +212,8 @@ const RegisterPatientPage = () => {
               {currentFollowups.questions.map((q, i) => (
                 <div key={i}>
                   <label className="text-[10px] text-muted-foreground block mb-1">{q}</label>
-                  <input
-                    value={currentFollowups.answers[i]}
-                    onChange={e => handleFollowupAnswer(i, e.target.value)}
-                    className="w-full bg-card border border-border rounded px-2 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary/50 transition-all"
-                    placeholder="Enter answer..."
-                  />
+                  <input value={currentFollowups.answers[i]} onChange={e => handleFollowupAnswer(i, e.target.value)}
+                    className="w-full bg-card border border-border rounded px-2 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary/50 transition-all" placeholder="Enter answer..." />
                 </div>
               ))}
               <button onClick={handleSaveFollowups} className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold">Save Answers</button>
@@ -251,11 +245,9 @@ const RegisterPatientPage = () => {
             <p className="text-[9px] text-muted-foreground leading-relaxed">This system provides informational triage guidance only. It is not a substitute for professional medical advice.</p>
           </div>
 
-          <button
-            onClick={handleRegister}
+          <button onClick={handleRegister}
             disabled={!name.trim() || !age || !phone.trim() || !!phoneError}
-            className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
+            className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
             <UserPlus size={14} /> {t("register.registerButton")}
           </button>
         </div>
@@ -268,14 +260,12 @@ const RegisterPatientPage = () => {
                 {existingFound ? t("register.alreadyRegistered") : t("register.registeredSuccess")}
               </span>
             </div>
-
             <div className="grid grid-cols-2 gap-3 text-xs mb-4">
               <div><span className="text-muted-foreground">{t("common.id")}:</span> <span className="text-foreground font-semibold">{registered.id}</span></div>
               <div><span className="text-muted-foreground">{t("common.name")}:</span> <span className="text-foreground font-semibold">{registered.name}</span></div>
               <div><span className="text-muted-foreground">{t("register.age")}:</span> <span className="text-foreground">{registered.age}</span></div>
               <div><span className="text-muted-foreground">{t("detail.phone")}:</span> <span className="text-foreground">{registered.phone}</span></div>
             </div>
-
             <div className="p-4 bg-secondary rounded-lg border border-border flex flex-col items-center gap-2 mb-4">
               <Barcode size={20} className="text-muted-foreground" />
               <div className="flex gap-[2px]">
@@ -285,7 +275,6 @@ const RegisterPatientPage = () => {
               </div>
               <p className="text-xs font-mono text-muted-foreground tracking-[4px]">{registered.barcode}</p>
             </div>
-
             {existingFound && registered.medicalHistory.length > 0 && (
               <div className="mb-4">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">{t("register.medicalHistory")}</p>
@@ -296,7 +285,6 @@ const RegisterPatientPage = () => {
                 </div>
               </div>
             )}
-
             <div className="flex gap-2">
               <button onClick={handlePrint} className="flex-1 py-2 rounded-lg bg-secondary border border-border text-xs text-foreground hover:border-primary/30 transition-all flex items-center justify-center gap-1.5">
                 <Printer size={12} /> {t("register.printBarcode")}
