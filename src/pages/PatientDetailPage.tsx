@@ -447,7 +447,7 @@ const PatientDetailPage = () => {
                 <script>
                   var svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
                   document.getElementById("bc").appendChild(svg);
-                  JsBarcode(svg,"${window.location.origin}/patients/${livePatient.id}",{width:1.5,height:60,fontSize:10,displayValue:true});
+                  JsBarcode(svg,"${livePatient.barcode}",{width:1.5,height:50,fontSize:12,displayValue:true});
                   setTimeout(function(){window.print()},500);
                 <\/script></body></html>`);
             }} className="p-1.5 rounded-lg bg-secondary border border-border hover:border-primary/30 transition-all" title="Print Barcode">
@@ -460,7 +460,7 @@ const PatientDetailPage = () => {
         <div className="stat-card mb-4">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
-              <Barcode value={`${window.location.origin}/patients/${livePatient.id}`} width={1.2} height={40} fontSize={10} background="transparent" lineColor="hsl(0 0% 80%)" displayValue={false} />
+              <Barcode value={livePatient.barcode} width={1} height={30} fontSize={8} background="transparent" lineColor="hsl(0 0% 80%)" displayValue={true} margin={0} />
             </div>
             <div className="flex flex-col gap-0.5">
               <span className="text-xs font-mono text-muted-foreground tracking-[2px]">{livePatient.barcode}</span>
