@@ -16,9 +16,9 @@ const navKeys = [
   { path: "/deterioration", key: "nav.deterioration", icon: Cpu },
   { path: "/resources", key: "nav.resources", icon: Building2 },
   { path: "/organs", key: "nav.organAllocation", icon: Heart },
-  
+  { path: "/medibot", key: "nav.medibot", icon: Bot },
   { path: "/architecture", key: "nav.architecture", icon: Settings },
-  
+
 ];
 
 const AppSidebar = () => {
