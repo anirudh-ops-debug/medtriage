@@ -283,8 +283,9 @@ const OrganAllocationPage = () => {
                         <span className="text-[11px] text-foreground">{m.organ}</span>
                       </div>
                       <div className="flex items-center gap-3 mt-1">
+                        <span className="text-[9px] text-muted-foreground">Patient Blood: <span className="text-foreground font-semibold">{m.patientBlood}</span></span>
                         <span className="text-[9px] text-muted-foreground">Donor Blood: <span className="text-foreground font-semibold">{m.donorBlood}</span></span>
-                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border ${m.priority === "Critical" ? "bg-primary/20 text-primary border-primary/40" : m.priority === "High" ? "bg-medical-yellow/20 text-medical-yellow border-medical-yellow/40" : "bg-medical-green/20 text-medical-green border-medical-green/40"}`}>{m.priority}</span>
+                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border ${m.priority === "Critical" || m.priority === "High" ? "bg-primary/20 text-primary border-primary/40" : m.priority === "Medium" ? "bg-medical-yellow/20 text-medical-yellow border-medical-yellow/40" : "bg-medical-green/20 text-medical-green border-medical-green/40"}`}>{m.priority}</span>
                       </div>
                     </div>
                   ))}
