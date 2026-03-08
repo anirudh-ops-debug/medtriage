@@ -438,9 +438,18 @@ const PatientDetailPage = () => {
               <span className="text-[10px] text-primary italic">Cannot discharge — {livePatient.riskLevel} risk</span>
             )}
             <button onClick={() => {
-              const w = window.open("", "_blank", "width=400,height=300");
+              const w = window.open("", "_blank", "width=500,height=400");
               if (!w) return;
-              w.document.write(`<html><body style="text-align:center;padding:40px;font-family:monospace;"><h2>${livePatient.name}</h2><p>${livePatient.id}</p><p style="font-size:24px;letter-spacing:4px;font-weight:bold">${livePatient.barcode}</p><script>window.print()<\/script></body></html>`);
+              w.document.write(`<html><body style="text-align:center;padding:40px;font-family:monospace;">
+                <h2>${livePatient.name}</h2><p>${livePatient.id}</p>
+                <div id="bc"></div>
+                <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
+                <script>
+                  var svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+                  document.getElementById("bc").appendChild(svg);
+                  JsBarcode(svg,"${window.location.origin}/patients/${livePatient.id}",{width:1.5,height:60,fontSize:10,displayValue:true});
+                  setTimeout(function(){window.print()},500);
+                <\/script></body></html>`);
             }} className="p-1.5 rounded-lg bg-secondary border border-border hover:border-primary/30 transition-all" title="Print Barcode">
               <Printer size={14} className="text-muted-foreground" />
             </button>
