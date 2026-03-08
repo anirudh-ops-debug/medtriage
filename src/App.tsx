@@ -13,7 +13,7 @@ import OrganAllocationPage from "./pages/OrganAllocationPage";
 
 import ArchitecturePage from "./pages/ArchitecturePage";
 import MediBotPage from "./pages/MediBotPage";
-
+import SeedDataPage from "./pages/SeedDataPage";
 import RegisterPatientPage from "./pages/RegisterPatientPage";
 import PatientListPage from "./pages/PatientListPage";
 import PatientDetailPage from "./pages/PatientDetailPage";
