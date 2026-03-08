@@ -775,9 +775,40 @@ const PatientDetailPage = () => {
             <div className="stat-card">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2"><FileText size={14} className="text-muted-foreground" /><h2 className="text-xs font-semibold text-foreground">Medical History</h2></div>
-                {canEditSymptoms && !editingHistory && (
-                  <button onClick={() => { setEditingHistory(true); setEditedHistory([...livePatient.medicalHistory]); }} className="flex items-center gap-1 px-2 py-1 rounded bg-secondary border border-border text-[10px] text-foreground hover:border-primary/30 transition-all"><Pencil size={10} /> Edit</button>
-                )}
+                <div className="flex items-center gap-1">
+                  <button onClick={() => {
+                    const w = window.open("", "_blank", "width=800,height=600");
+                    if (!w) return;
+                    w.document.write(`<html><head><title>Medical History – ${livePatient.name}</title>
+                      <style>body{font-family:'Segoe UI',Arial,sans-serif;padding:40px;color:#222;max-width:800px;margin:0 auto;}.header{border-bottom:3px solid #B11226;padding-bottom:15px;margin-bottom:20px;}.logo{font-size:22px;font-weight:bold;color:#B11226;}table{width:100%;border-collapse:collapse;margin-top:15px;}th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:12px;}th{background:#f8f8f8;font-weight:bold;}</style></head><body>
+                      <div class="header"><div class="logo">🏥 MedTriage AI</div><div style="font-size:10px;color:#666;text-transform:uppercase;letter-spacing:2px;">Patient Medical History Report</div></div>
+                      <div style="background:#f9f9f9;padding:15px;border-radius:8px;border:1px solid #eee;margin-bottom:20px;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
+                          <div><strong>Patient:</strong> ${livePatient.name}</div><div><strong>ID:</strong> ${livePatient.id}</div>
+                          <div><strong>Age/Gender:</strong> ${livePatient.age} / ${livePatient.gender}</div><div><strong>Admission:</strong> ${livePatient.admissionDate}</div>
+                          <div><strong>Diagnosis:</strong> ${livePatient.diagnosis || "Pending"}</div><div><strong>Risk Level:</strong> ${livePatient.riskLevel}</div>
+                        </div>
+                      </div>
+                      <h3 style="color:#B11226;">Current Symptoms</h3>
+                      <ul>${livePatient.symptoms.map(s => `<li style="font-size:12px;margin:4px 0;">${s}</li>`).join("") || "<li>None recorded</li>"}</ul>
+                      <h3 style="color:#B11226;margin-top:20px;">Medical History</h3>
+                      <table><tr><th>#</th><th>Entry</th></tr>${livePatient.medicalHistory.map((h, i) => `<tr><td>${i + 1}</td><td>${h}</td></tr>`).join("") || "<tr><td colspan='2'>No history recorded</td></tr>"}</table>
+                      <h3 style="color:#B11226;margin-top:20px;">Current Vitals</h3>
+                      <table><tr><th>Metric</th><th>Value</th><th>Normal Range</th></tr>
+                        <tr><td>Heart Rate</td><td>${livePatient.vitals.hr} BPM</td><td>60-100 BPM</td></tr>
+                        <tr><td>Blood Pressure</td><td>${livePatient.vitals.bpSys}/${livePatient.vitals.bpDia} mmHg</td><td>90/60 - 120/80</td></tr>
+                        <tr><td>SpO₂</td><td>${livePatient.vitals.spo2}%</td><td>95-100%</td></tr>
+                        <tr><td>Temperature</td><td>${livePatient.vitals.temp.toFixed(1)}°C</td><td>36.1-37.2°C</td></tr>
+                      </table>
+                      <div style="margin-top:30px;padding-top:15px;border-top:2px solid #eee;font-size:10px;color:#888;">
+                        <p>Generated: ${new Date().toLocaleString()} · MedTriage AI Clinical System</p>
+                        <p style="color:#B11226;font-weight:bold;">This document should be reviewed by a qualified medical professional.</p>
+                      </div><script>window.print()<\/script></body></html>`);
+                  }} className="flex items-center gap-1 px-2 py-1 rounded bg-primary/10 border border-primary/20 text-[10px] text-primary hover:bg-primary/20 transition-all"><Download size={10} /> PDF</button>
+                  {canEditSymptoms && !editingHistory && (
+                    <button onClick={() => { setEditingHistory(true); setEditedHistory([...livePatient.medicalHistory]); }} className="flex items-center gap-1 px-2 py-1 rounded bg-secondary border border-border text-[10px] text-foreground hover:border-primary/30 transition-all"><Pencil size={10} /> Edit</button>
+                  )}
+                </div>
               </div>
               {editingHistory ? (
                 <div className="space-y-2">
