@@ -1,9 +1,22 @@
 import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { UserPlus, Barcode, Printer, CheckCircle } from "lucide-react";
+import { UserPlus, Barcode, Printer, CheckCircle, AlertTriangle } from "lucide-react";
 import { usePatients, Patient } from "@/contexts/PatientContext";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/i18n/LanguageContext";
+
+const EMERGENCY_SYMPTOMS = ["chest pain", "breathing difficulty", "stroke signs", "heavy bleeding"];
+
+const TRIAGE_FOLLOWUPS: Record<string, string[]> = {
+  headache: ["How long have you had the headache?", "Any vomiting?", "Do you have fever?", "Vision problems?", "Neck stiffness?"],
+  "chest pain": ["When did the pain start?", "Does it radiate to the arm or jaw?", "Shortness of breath?", "Sweating or nausea?"],
+  fever: ["How high is the temperature?", "How many days?", "Any chills or rigors?", "Any rash?"],
+  "breathing difficulty": ["Sudden or gradual onset?", "Any wheezing?", "Chest tightness?", "History of asthma or COPD?"],
+  cough: ["Dry or productive cough?", "Any blood in sputum?", "Duration?", "Associated fever?"],
+  "abdominal pain": ["Location of pain?", "Any vomiting or diarrhea?", "Blood in stool?", "Last meal?"],
+  dizziness: ["Any fainting episodes?", "Associated with movement?", "Hearing changes?", "Blurred vision?"],
+  "heavy bleeding": ["Location of bleeding?", "How long has it been bleeding?", "Any trauma?", "On blood thinners?"],
+};
 
 const RegisterPatientPage = () => {
   const { registerPatient, patients } = usePatients();
@@ -15,9 +28,61 @@ const RegisterPatientPage = () => {
   const [gender, setGender] = useState("M");
   const [registered, setRegistered] = useState<Patient | null>(null);
   const [existingFound, setExistingFound] = useState(false);
+  const [phoneError, setPhoneError] = useState("");
+
+  // Triage symptom flow
+  const [symptomInput, setSymptomInput] = useState("");
+  const [symptoms, setSymptoms] = useState<string[]>([]);
+  const [triageAnswers, setTriageAnswers] = useState<Record<string, string[]>>({});
+  const [currentFollowups, setCurrentFollowups] = useState<{ symptom: string; questions: string[]; answers: string[] } | null>(null);
+  const [emergencyAlert, setEmergencyAlert] = useState(false);
+
+  const validatePhone = (value: string) => {
+    setPhone(value);
+    if (value && !/^\d{10}$/.test(value)) {
+      setPhoneError("Invalid phone number. Please enter a valid 10-digit phone number.");
+    } else {
+      setPhoneError("");
+    }
+  };
+
+  const handleAddSymptom = () => {
+    const s = symptomInput.trim().toLowerCase();
+    if (!s || symptoms.includes(s)) return;
+    setSymptoms(prev => [...prev, s]);
+    setSymptomInput("");
+
+    // Check emergency
+    if (EMERGENCY_SYMPTOMS.some(e => s.includes(e))) {
+      setEmergencyAlert(true);
+    }
+
+    // Check for follow-up questions
+    const key = Object.keys(TRIAGE_FOLLOWUPS).find(k => s.includes(k));
+    if (key) {
+      setCurrentFollowups({ symptom: s, questions: TRIAGE_FOLLOWUPS[key], answers: new Array(TRIAGE_FOLLOWUPS[key].length).fill("") });
+    }
+  };
+
+  const handleFollowupAnswer = (idx: number, value: string) => {
+    if (!currentFollowups) return;
+    const newAnswers = [...currentFollowups.answers];
+    newAnswers[idx] = value;
+    setCurrentFollowups({ ...currentFollowups, answers: newAnswers });
+  };
+
+  const handleSaveFollowups = () => {
+    if (!currentFollowups) return;
+    setTriageAnswers(prev => ({ ...prev, [currentFollowups.symptom]: currentFollowups.answers }));
+    setCurrentFollowups(null);
+  };
 
   const handleRegister = async () => {
     if (!name.trim() || !age || !phone.trim()) return;
+    if (!/^\d{10}$/.test(phone)) {
+      setPhoneError("Invalid phone number. Please enter a valid 10-digit phone number.");
+      return;
+    }
     const existing = patients.find(p => p.phone === phone);
     if (existing) {
       setRegistered(existing);
@@ -70,11 +135,16 @@ const RegisterPatientPage = () => {
               <label className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1">{t("register.phoneNumber")}</label>
               <input
                 value={phone}
-                onChange={e => setPhone(e.target.value)}
-                className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
+                onChange={e => validatePhone(e.target.value)}
+                className={`w-full bg-secondary border rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 transition-all ${phoneError ? "border-primary focus:border-primary focus:ring-primary/30" : "border-border focus:border-primary/50 focus:ring-primary/30"}`}
                 placeholder={t("register.digitPhone")}
                 maxLength={10}
               />
+              {phoneError && (
+                <p className="text-[10px] text-primary mt-1 flex items-center gap-1">
+                  <AlertTriangle size={10} /> {phoneError}
+                </p>
+              )}
             </div>
             <div>
               <label className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1">{t("register.age")}</label>
@@ -102,9 +172,88 @@ const RegisterPatientPage = () => {
             </div>
           </div>
 
+          {/* Symptom Input with Triage Flow */}
+          <div>
+            <label className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1">Symptoms</label>
+            <div className="flex gap-2">
+              <input
+                value={symptomInput}
+                onChange={e => setSymptomInput(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleAddSymptom()}
+                className="flex-1 bg-secondary border border-border rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
+                placeholder="Enter symptom (e.g., Headache, Chest pain...)"
+              />
+              <button onClick={handleAddSymptom} className="px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold">Add</button>
+            </div>
+            {symptoms.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {symptoms.map((s, i) => (
+                  <span key={i} className="px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] border border-primary/20">{s}</span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Emergency Alert */}
+          {emergencyAlert && (
+            <div className="p-3 rounded-lg bg-primary/15 border-2 border-primary glow-red-border critical-flash">
+              <div className="flex items-center gap-2">
+                <AlertTriangle size={18} className="text-primary" />
+                <div>
+                  <p className="text-sm font-bold text-primary">🚨 CALL EMERGENCY SERVICES</p>
+                  <p className="text-[10px] text-primary/80">Critical symptom detected. Immediate medical attention required.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Triage Follow-up Questions */}
+          {currentFollowups && (
+            <div className="p-3 rounded-lg border border-primary/20 bg-primary/5 space-y-3">
+              <p className="text-xs font-semibold text-foreground">Triage Questions for: <span className="text-primary capitalize">{currentFollowups.symptom}</span></p>
+              {currentFollowups.questions.map((q, i) => (
+                <div key={i}>
+                  <label className="text-[10px] text-muted-foreground block mb-1">{q}</label>
+                  <input
+                    value={currentFollowups.answers[i]}
+                    onChange={e => handleFollowupAnswer(i, e.target.value)}
+                    className="w-full bg-card border border-border rounded px-2 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary/50 transition-all"
+                    placeholder="Enter answer..."
+                  />
+                </div>
+              ))}
+              <button onClick={handleSaveFollowups} className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold">Save Answers</button>
+            </div>
+          )}
+
+          {/* Saved triage answers */}
+          {Object.keys(triageAnswers).length > 0 && (
+            <div className="space-y-2">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Triage Responses</p>
+              {Object.entries(triageAnswers).map(([symptom, answers]) => {
+                const questions = Object.keys(TRIAGE_FOLLOWUPS).find(k => symptom.includes(k));
+                const qs = questions ? TRIAGE_FOLLOWUPS[questions] : [];
+                return (
+                  <div key={symptom} className="p-2 rounded bg-secondary border border-border">
+                    <p className="text-[10px] text-primary font-semibold capitalize mb-1">{symptom}</p>
+                    {qs.map((q, i) => answers[i] && (
+                      <p key={i} className="text-[10px] text-muted-foreground"><span className="text-foreground">{q}</span> — {answers[i]}</p>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Medical Disclaimer */}
+          <div className="p-2.5 rounded-lg bg-muted/50 border border-border">
+            <p className="text-[10px] font-semibold text-muted-foreground">⚕️ Medical Disclaimer</p>
+            <p className="text-[9px] text-muted-foreground leading-relaxed">This system provides informational triage guidance only. It is not a substitute for professional medical advice.</p>
+          </div>
+
           <button
             onClick={handleRegister}
-            disabled={!name.trim() || !age || !phone.trim()}
+            disabled={!name.trim() || !age || !phone.trim() || !!phoneError}
             className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             <UserPlus size={14} /> {t("register.registerButton")}
