@@ -21,6 +21,7 @@
     "organAllocation": "Organ Allocation",
     "medibot": "MediBot",
     "architecture": "Architecture",
+    "seedData": "Seed Data",
     "logout": "Logout"
   },
   "auth": {
