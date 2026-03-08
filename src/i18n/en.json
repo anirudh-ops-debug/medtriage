@@ -19,9 +19,8 @@
     "deterioration": "Deterioration",
     "resources": "Resources",
     "organAllocation": "Organ Allocation",
-    
+    "medibot": "MediBot",
     "architecture": "Architecture",
-    "futureScope": "Future Scope",
     "logout": "Logout"
   },
   "auth": {
