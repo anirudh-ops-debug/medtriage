@@ -1,9 +1,11 @@
 import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { UserPlus, Barcode, Printer, CheckCircle, AlertTriangle, X } from "lucide-react";
+import { UserPlus, Printer, CheckCircle, AlertTriangle, X } from "lucide-react";
 import { usePatients, Patient } from "@/contexts/PatientContext";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { supabase } from "@/integrations/supabase/client";
+import Barcode from "react-barcode";
 
 const EMERGENCY_SYMPTOMS = ["chest pain", "breathing difficulty", "stroke signs", "heavy bleeding"];
 
