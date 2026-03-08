@@ -122,6 +122,8 @@ const RegisterPatientPage = () => {
         }).join(" | ");
         await supabase.from("patient_timeline").insert({ patient_id: patient.dbId, event_description: `Triage responses: ${desc}`, event_type: "triage" });
       }
+      // Refresh to pick up saved symptoms
+      await refreshPatients();
       setRegistered(patient);
       setExistingFound(false);
     }
