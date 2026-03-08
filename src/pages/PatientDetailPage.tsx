@@ -451,10 +451,12 @@ const PatientDetailPage = () => {
         <div className="stat-card mb-4">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
-              <Barcode size={14} className="text-muted-foreground" />
-              <span className="text-xs font-mono text-muted-foreground tracking-[3px]">{livePatient.barcode}</span>
+              <Barcode value={`${window.location.origin}/patients/${livePatient.id}`} width={1.2} height={40} fontSize={10} background="transparent" lineColor="hsl(0 0% 80%)" displayValue={false} />
             </div>
-            <div className="text-xs text-muted-foreground">Phone: <span className="text-foreground">{livePatient.phone}</span></div>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs font-mono text-muted-foreground tracking-[2px]">{livePatient.barcode}</span>
+              <div className="text-xs text-muted-foreground">Phone: <span className="text-foreground">{livePatient.phone}</span></div>
+            </div>
           </div>
         </div>
 
